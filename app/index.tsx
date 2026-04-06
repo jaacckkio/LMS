@@ -1,26 +1,6 @@
 import { Redirect } from 'expo-router';
-import { useAuth } from '../hooks/useAuth';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
-import { Colors } from '../constants/theme';
 
+// Always open to the tabs — no auth gate. Guest mode fully functional.
 export default function Index() {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator color={Colors.accent} size="large" />
-      </View>
-    );
-  }
-
-  if (user) {
-    return <Redirect href="/(tabs)" />;
-  }
-
-  return <Redirect href="/(onboarding)" />;
+  return <Redirect href="/(tabs)" />;
 }
-
-const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.background },
-});

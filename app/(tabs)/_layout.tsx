@@ -1,19 +1,23 @@
 import { Tabs } from 'expo-router';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet, Platform, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '../../constants/theme';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
-function TabIcon({ name, focused }: { name: IconName; focused: boolean }) {
+function TabIcon({
+  name,
+  focused,
+  label,
+}: {
+  name: IconName;
+  focused: boolean;
+  label: string;
+}) {
   return (
-    <View style={styles.iconWrapper}>
-      <Ionicons
-        name={name}
-        size={24}
-        color={focused ? Colors.accent : Colors.textMuted}
-      />
-      {focused && <View style={styles.dot} />}
+    <View style={styles.iconWrap}>
+      <Ionicons name={name} size={22} color={focused ? Colors.primary : Colors.textMuted} />
+      <Text style={[styles.label, focused && styles.labelActive]}>{label}</Text>
     </View>
   );
 }
@@ -24,38 +28,39 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: styles.tabBar,
-        tabBarShowLabel: true,
-        tabBarLabelStyle: styles.tabLabel,
-        tabBarActiveTintColor: Colors.accent,
-        tabBarInactiveTintColor: Colors.textMuted,
+        tabBarShowLabel: false,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'home' : 'home-outline'} focused={focused} />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name={focused ? 'home' : 'home-outline'} focused={focused} label="Home" />
+          ),
         }}
       />
       <Tabs.Screen
         name="pick"
         options={{
-          title: 'Pick',
-          tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'football' : 'football-outline'} focused={focused} />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name={focused ? 'football' : 'football-outline'} focused={focused} label="Pick" />
+          ),
         }}
       />
       <Tabs.Screen
         name="leagues"
         options={{
-          title: 'Leagues',
-          tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'trophy' : 'trophy-outline'} focused={focused} />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name={focused ? 'trophy' : 'trophy-outline'} focused={focused} label="Leagues" />
+          ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
-          tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'person' : 'person-outline'} focused={focused} />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name={focused ? 'person' : 'person-outline'} focused={focused} label="Profile" />
+          ),
         }}
       />
     </Tabs>
@@ -67,18 +72,11 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderTopColor: Colors.border,
     borderTopWidth: 1,
-    height: Platform.OS === 'ios' ? 88 : 64,
-    paddingBottom: Platform.OS === 'ios' ? 28 : 8,
+    height: Platform.OS === 'ios' ? 82 : 62,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 6,
     paddingTop: 8,
   },
-  tabLabel: { fontSize: 11, fontWeight: '600' },
-  iconWrapper: { alignItems: 'center', gap: 2 },
-  dot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.accent,
-    position: 'absolute',
-    bottom: -6,
-  },
+  iconWrap: { alignItems: 'center', gap: 3 },
+  label: { fontSize: 10, fontWeight: '600', color: Colors.textMuted },
+  labelActive: { color: Colors.primary },
 });

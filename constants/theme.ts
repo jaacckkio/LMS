@@ -1,22 +1,32 @@
 export const Colors = {
-  background: '#1A1A2E',
-  surface: '#16213E',
-  surfaceElevated: '#1F2B47',
-  accent: '#E94560',
-  navy: '#0F3460',
+  // Backgrounds
+  background: '#0A0A0A',
+  surface: '#141414',
+  surfaceElevated: '#1E1E1E',
+  surfaceHigh: '#2A2A2A',
+
+  // Brand
+  primary: '#00FF87',      // electric green — alive/win
+  danger: '#FF3B30',       // eliminated/loss
+  warning: '#FF9F0A',      // deadline approaching
+  gold: '#FFD700',         // reset-available phase
+
+  // Text
   text: '#FFFFFF',
-  textSecondary: '#8892A4',
-  textMuted: '#4A5568',
-  border: '#2D3748',
-  success: '#48BB78',
-  warning: '#ECC94B',
-  error: '#E94560',
-  eliminated: '#4A5568',
-  alive: '#48BB78',
+  textSecondary: '#8E8E93',
+  textMuted: '#48484A',
+
+  // UI
+  border: '#2C2C2E',
+  overlay: 'rgba(0,0,0,0.7)',
+
+  // Semantic aliases
+  alive: '#00FF87',
+  eliminated: '#FF3B30',
+  pending: '#FF9F0A',
 } as const;
 
 export const Typography = {
-  // Font sizes
   xs: 11,
   sm: 13,
   base: 15,
@@ -27,7 +37,6 @@ export const Typography = {
   '3xl': 34,
   '4xl': 42,
 
-  // Font weights (as names for consistency)
   regular: '400' as const,
   medium: '500' as const,
   semibold: '600' as const,
@@ -44,13 +53,13 @@ export const Spacing = {
   xl: 24,
   '2xl': 32,
   '3xl': 40,
-  '4xl': 48,
+  '4xl': 56,
 } as const;
 
 export const Radius = {
-  sm: 6,
-  md: 10,
-  lg: 14,
+  sm: 8,
+  md: 12,
+  lg: 16,
   xl: 20,
-  full: 9999,
+  pill: 999,
 } as const;

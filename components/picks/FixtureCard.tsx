@@ -1,104 +1,140 @@
-import React from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
-import { format } from 'date-fns';
-import { Text } from '../ui/Text';
+import React, { useRef, useEffect } from 'react';
+import { View, TouchableOpacity, StyleSheet, Animated, Text } from 'react-native';
 import { TeamCrest } from '../ui/TeamCrest';
-import { FormBadge } from '../ui/FormBadge';
-import { Colors, Spacing, Radius } from '../../constants/theme';
-import { getTeamById } from '../../constants/teams';
-import type { Fixture, FormResult } from '../../types';
+import { Colors, Spacing, Radius, Typography } from '../../constants/theme';
+import { ApiMatch } from '../../types';
+import { isMatchLocked, toLondonTimeShort } from '../../lib/api';
 
 interface Props {
-  fixture: Fixture;
-  selectedTeamId?: string | null;
-  usedTeamIds: string[];
-  onSelectTeam: (teamId: string) => void;
-  locked?: boolean;
+  match: ApiMatch;
+  selectedTeamTla: string | null;
+  usedTeamTlas: string[];
+  resetTeamTlas: string[];   // teams available again after a reset
+  onSelectTeam: (tla: string) => void;
+  disabled?: boolean;
 }
 
-export function FixtureCard({ fixture, selectedTeamId, usedTeamIds, onSelectTeam, locked }: Props) {
-  const homeTeam = getTeamById(fixture.homeTeamId);
-  const awayTeam = getTeamById(fixture.awayTeamId);
+export function FixtureCard({
+  match,
+  selectedTeamTla,
+  usedTeamTlas,
+  resetTeamTlas,
+  onSelectTeam,
+  disabled = false,
+}: Props) {
+  const locked = isMatchLocked(match.utcDate) || disabled;
+  const isLive =
+    match.status === 'IN_PLAY' || match.status === 'PAUSED';
+  const isFinished = match.status === 'FINISHED';
 
-  if (!homeTeam || !awayTeam) return null;
+  const pulse = useRef(new Animated.Value(1)).current;
 
-  const homeUsed = usedTeamIds.includes(fixture.homeTeamId);
-  const awayUsed = usedTeamIds.includes(fixture.awayTeamId);
-  const homeSelected = selectedTeamId === fixture.homeTeamId;
-  const awaySelected = selectedTeamId === fixture.awayTeamId;
+  useEffect(() => {
+    if (!isLive) return;
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 0.3, duration: 600, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 600, useNativeDriver: true }),
+      ])
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [isLive, pulse]);
 
-  const kickoff = new Date(fixture.kickoff);
+  function getState(tla: string) {
+    if (selectedTeamTla === tla) return 'selected' as const;
+    if (usedTeamTlas.includes(tla) && !resetTeamTlas.includes(tla)) return 'used' as const;
+    if (resetTeamTlas.includes(tla)) return 'reset' as const;
+    return 'default' as const;
+  }
 
-  const TeamButton = ({
-    teamId,
-    crest,
-    name,
-    form,
-    selected,
-    used,
-    usedWeek,
-  }: {
-    teamId: string;
-    crest: string;
-    name: string;
-    form?: FormResult[];
-    selected: boolean;
-    used: boolean;
-    usedWeek?: number;
-  }) => (
-    <TouchableOpacity
-      style={[styles.teamBtn, selected && styles.teamBtnSelected, used && styles.teamBtnUsed]}
-      onPress={() => !used && !locked && onSelectTeam(teamId)}
-      disabled={used || locked}
-      activeOpacity={0.75}
-    >
-      <TeamCrest uri={crest} size={48} dimmed={used && !selected} />
-      <Text
-        style={[styles.teamName, used && !selected && styles.teamNameUsed]}
-        numberOfLines={1}
-      >
-        {name}
-      </Text>
-      {used ? (
-        <Text style={styles.usedLabel}>Used</Text>
-      ) : (
-        <View style={styles.form}>
-          {form?.map((r, i) => <FormBadge key={i} result={r} />)}
+  function canPick(tla: string) {
+    if (locked) return false;
+    const s = getState(tla);
+    return s === 'default' || s === 'selected' || s === 'reset';
+  }
+
+  const { homeTeam, awayTeam } = match;
+  const homeState = getState(homeTeam.tla);
+  const awayState = getState(awayTeam.tla);
+
+  const centreContent = () => {
+    if (isLive) {
+      return (
+        <View style={styles.liveBlock}>
+          <Animated.View style={[styles.liveDot, { opacity: pulse }]} />
+          <Text style={styles.liveScore}>
+            {match.score.fullTime.home ?? 0} – {match.score.fullTime.away ?? 0}
+          </Text>
         </View>
-      )}
-    </TouchableOpacity>
-  );
+      );
+    }
+    if (isFinished) {
+      return (
+        <Text style={styles.score}>
+          {match.score.fullTime.home} – {match.score.fullTime.away}
+        </Text>
+      );
+    }
+    return <Text style={styles.time}>{toLondonTimeShort(match.utcDate)}</Text>;
+  };
 
   return (
-    <View style={styles.container}>
-      <TeamButton
-        teamId={fixture.homeTeamId}
-        crest={homeTeam.crest}
-        name={homeTeam.shortName}
-        form={fixture.homeForm}
-        selected={homeSelected}
-        used={homeUsed}
+    <View style={[styles.card, locked && styles.cardLocked]}>
+      <TeamSide
+        team={homeTeam}
+        state={homeState}
+        onPress={() => canPick(homeTeam.tla) && onSelectTeam(homeTeam.tla)}
+        side="home"
       />
 
-      <View style={styles.middle}>
-        <Text style={styles.vs}>VS</Text>
-        <Text style={styles.time}>{format(kickoff, 'EEE HH:mm')}</Text>
-      </View>
+      <View style={styles.centre}>{centreContent()}</View>
 
-      <TeamButton
-        teamId={fixture.awayTeamId}
-        crest={awayTeam.crest}
-        name={awayTeam.shortName}
-        form={fixture.awayForm}
-        selected={awaySelected}
-        used={awayUsed}
+      <TeamSide
+        team={awayTeam}
+        state={awayState}
+        onPress={() => canPick(awayTeam.tla) && onSelectTeam(awayTeam.tla)}
+        side="away"
       />
     </View>
   );
 }
 
+function TeamSide({
+  team,
+  state,
+  onPress,
+  side,
+}: {
+  team: ApiMatch['homeTeam'];
+  state: 'default' | 'used' | 'selected' | 'reset' | 'eliminated';
+  onPress: () => void;
+  side: 'home' | 'away';
+}) {
+  const isSelected = state === 'selected';
+  const isUsed = state === 'used';
+
+  return (
+    <TouchableOpacity
+      style={[
+        styles.side,
+        isSelected && styles.sideSelected,
+        side === 'away' && styles.sideAway,
+      ]}
+      onPress={onPress}
+      activeOpacity={0.75}
+      disabled={isUsed}
+    >
+      <TeamCrest uri={team.crest} size={52} state={state} />
+      <Text style={[styles.tla, isUsed && styles.tlaUsed]}>{team.tla}</Text>
+      {isUsed && <Text style={styles.usedTag}>Used</Text>}
+      {state === 'reset' && <Text style={styles.resetTag}>Reset</Text>}
+    </TouchableOpacity>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: {
+  card: {
     flexDirection: 'row',
     backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
@@ -107,40 +143,69 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
     overflow: 'hidden',
   },
-  teamBtn: {
+  cardLocked: { opacity: 0.6 },
+  side: {
     flex: 1,
     alignItems: 'center',
     paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.sm,
     gap: 6,
   },
-  teamBtnSelected: {
-    backgroundColor: Colors.accent + '22',
+  sideAway: {},
+  sideSelected: {
+    backgroundColor: Colors.primary + '18',
     borderWidth: 1.5,
-    borderColor: Colors.accent,
+    borderColor: Colors.primary + '80',
     borderRadius: Radius.lg,
     margin: 2,
   },
-  teamBtnUsed: { opacity: 0.5 },
-  teamName: {
-    fontSize: 13,
-    fontWeight: '600',
+  tla: {
+    fontSize: Typography.sm,
+    fontWeight: Typography.bold,
     color: Colors.text,
-    textAlign: 'center',
+    letterSpacing: 0.5,
   },
-  teamNameUsed: { color: Colors.textMuted },
-  usedLabel: {
+  tlaUsed: { color: Colors.textMuted },
+  usedTag: {
     fontSize: 10,
     color: Colors.textMuted,
     fontWeight: '600',
+    textDecorationLine: 'line-through',
+    textDecorationColor: Colors.textMuted,
   },
-  form: { flexDirection: 'row', gap: 3 },
-  middle: {
+  resetTag: {
+    fontSize: 10,
+    color: Colors.gold,
+    fontWeight: '700',
+  },
+  centre: {
+    width: 72,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: Spacing.sm,
     gap: 4,
   },
-  vs: { fontSize: 11, fontWeight: '700', color: Colors.textMuted, letterSpacing: 1 },
-  time: { fontSize: 11, color: Colors.textSecondary },
+  liveBlock: { alignItems: 'center', gap: 4 },
+  liveDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: Colors.primary,
+  },
+  liveScore: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.primary,
+    fontVariant: ['tabular-nums'],
+  },
+  score: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.text,
+    fontVariant: ['tabular-nums'],
+  },
+  time: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+    fontVariant: ['tabular-nums'],
+  },
 });

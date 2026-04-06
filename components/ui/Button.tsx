@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
   ViewStyle,
   TextStyle,
+  Animated,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Colors, Typography, Radius, Spacing } from '../../constants/theme';
@@ -33,64 +34,59 @@ export function Button({
   textStyle,
   haptic = true,
 }: Props) {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.spring(scale, { toValue: 0.97, useNativeDriver: true, speed: 50 }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 50 }).start();
+  };
+
   const handlePress = () => {
-    if (haptic) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    }
+    if (haptic) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onPress();
   };
 
   return (
-    <TouchableOpacity
-      style={[
-        styles.base,
-        styles[variant],
-        styles[`size_${size}`],
-        (disabled || loading) && styles.disabled,
-        style,
-      ]}
-      onPress={handlePress}
-      disabled={disabled || loading}
-      activeOpacity={0.85}
-    >
-      {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? Colors.text : Colors.accent} size="small" />
-      ) : (
-        <Text
-          style={[
-            styles.text,
-            styles[`text_${variant}`],
-            styles[`textSize_${size}`],
-            textStyle,
-          ]}
-        >
-          {title}
-        </Text>
-      )}
-    </TouchableOpacity>
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <TouchableOpacity
+        style={[styles.base, styles[variant], styles[`sz_${size}`], (disabled || loading) && styles.disabled, style]}
+        onPress={handlePress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={disabled || loading}
+        activeOpacity={1}
+      >
+        {loading ? (
+          <ActivityIndicator color={variant === 'primary' ? Colors.background : Colors.primary} size="small" />
+        ) : (
+          <Text style={[styles.text, styles[`text_${variant}`], styles[`textSz_${size}`], textStyle]}>
+            {title}
+          </Text>
+        )}
+      </TouchableOpacity>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  base: {
-    borderRadius: Radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  primary: { backgroundColor: Colors.accent },
+  base: { borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
+  primary: { backgroundColor: Colors.primary },
   secondary: { backgroundColor: Colors.surfaceElevated, borderWidth: 1, borderColor: Colors.border },
   ghost: { backgroundColor: 'transparent' },
-  danger: { backgroundColor: Colors.error },
-  size_sm: { paddingVertical: Spacing.sm, paddingHorizontal: Spacing.base },
-  size_md: { paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg },
-  size_lg: { paddingVertical: Spacing.base, paddingHorizontal: Spacing.xl },
-  disabled: { opacity: 0.45 },
+  danger: { backgroundColor: Colors.danger },
+  sz_sm: { paddingVertical: Spacing.sm, paddingHorizontal: Spacing.base },
+  sz_md: { paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg },
+  sz_lg: { paddingVertical: Spacing.base + 2, paddingHorizontal: Spacing.xl },
+  disabled: { opacity: 0.4 },
   text: { fontWeight: Typography.semibold },
-  text_primary: { color: Colors.text },
+  text_primary: { color: Colors.background },
   text_secondary: { color: Colors.text },
-  text_ghost: { color: Colors.accent },
+  text_ghost: { color: Colors.primary },
   text_danger: { color: Colors.text },
-  textSize_sm: { fontSize: Typography.sm },
-  textSize_md: { fontSize: Typography.base },
-  textSize_lg: { fontSize: Typography.md },
+  textSz_sm: { fontSize: Typography.sm },
+  textSz_md: { fontSize: Typography.base },
+  textSz_lg: { fontSize: Typography.md },
 });
