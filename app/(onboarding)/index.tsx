@@ -1,9 +1,10 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /**
  * Onboarding Screen 1: Hook screen
  * "Pick one team. Survive the season."
  */
 import React from 'react';
-import { View, StyleSheet, SafeAreaView, Image } from 'react-native';
+import { View, StyleSheet,  Image } from 'react-native';
 import { router } from 'expo-router';
 import { Text } from '../../components/ui/Text';
 import { Button } from '../../components/ui/Button';

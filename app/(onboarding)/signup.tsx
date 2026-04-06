@@ -1,3 +1,4 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /**
  * Onboarding Screen 3: Post-pick signup
  * "You're in. Your pick is locked."
@@ -6,7 +7,6 @@ import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
-  SafeAreaView,
   TextInput,
   KeyboardAvoidingView,
   Platform,

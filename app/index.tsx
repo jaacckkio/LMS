@@ -15,10 +15,10 @@ export default function Index() {
   }
 
   if (user) {
-    return <Redirect href="/(tabs)/" />;
+    return <Redirect href="/(tabs)" />;
   }
 
-  return <Redirect href="/(onboarding)/" />;
+  return <Redirect href="/(onboarding)" />;
 }
 
 const styles = StyleSheet.create({

@@ -8,7 +8,12 @@
       "Bash(cp:*)",
       "Bash(npm install:*)",
       "Bash(npx tsc:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git remote:*)",
+      "Bash(node:*)",
+      "Bash(npm uninstall:*)"
     ]
   }
 }

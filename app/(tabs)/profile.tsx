@@ -1,8 +1,9 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /**
  * Profile Tab — user stats, season history, teams used grid
  */
 import React from 'react';
-import { View, ScrollView, StyleSheet, SafeAreaView, TouchableOpacity, Alert } from 'react-native';
+import { View, ScrollView, StyleSheet,  TouchableOpacity, Alert } from 'react-native';
 import { Text } from '../../components/ui/Text';
 import { Card } from '../../components/ui/Card';
 import { TeamCrest } from '../../components/ui/TeamCrest';

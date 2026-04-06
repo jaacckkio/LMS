@@ -1,3 +1,4 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /**
  * Onboarding Screen 4: Create or Join a league
  */
@@ -5,7 +6,6 @@ import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
-  SafeAreaView,
   TextInput,
   TouchableOpacity,
   Alert,
@@ -60,11 +60,11 @@ export default function LeagueSetupScreen() {
     // TODO: look up and join via Supabase
     setTimeout(() => {
       setLoading(false);
-      router.replace('/(tabs)/');
+      router.replace('/(tabs)');
     }, 800);
   };
 
-  const handleSkip = () => router.replace('/(tabs)/');
+  const handleSkip = () => router.replace('/(tabs)');
 
   if (createdCode) {
     return (

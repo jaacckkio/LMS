@@ -1,8 +1,9 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /**
  * Pick Tab — fixtures for current gameweek + season picks grid
  */
 import React, { useState, useCallback } from 'react';
-import { View, FlatList, StyleSheet, SafeAreaView, Alert } from 'react-native';
+import { View, FlatList, StyleSheet,  Alert } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Text } from '../../components/ui/Text';
 import { FixtureCard } from '../../components/picks/FixtureCard';

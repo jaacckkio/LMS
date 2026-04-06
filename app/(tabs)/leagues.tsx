@@ -1,3 +1,4 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /**
  * Leagues Tab — list, create, join, and view league details
  */
@@ -6,7 +7,6 @@ import {
   View,
   FlatList,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   TextInput,
   Alert,

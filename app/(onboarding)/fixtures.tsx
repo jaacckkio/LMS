@@ -1,8 +1,9 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /**
  * Onboarding Screen 2: Pick your first team from this week's fixtures
  */
 import React, { useState, useCallback } from 'react';
-import { View, FlatList, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
+import { View, FlatList, StyleSheet,  TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import { Text } from '../../components/ui/Text';
 import { FixtureCard } from '../../components/picks/FixtureCard';

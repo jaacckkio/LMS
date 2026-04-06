@@ -1,8 +1,9 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /**
  * Home Screen — contextual: shows countdown before deadline, results after matchday
  */
 import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
+import { View, ScrollView, StyleSheet,  TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import { Text } from '../../components/ui/Text';
 import { Card } from '../../components/ui/Card';
