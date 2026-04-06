@@ -1,8 +1,20 @@
 -- Last Man Standing — Supabase Schema
 -- Competition-agnostic. Supports League, World Cup, Euros, Copa America.
 -- Run in Supabase SQL editor.
+-- Safe to re-run: drops everything first then recreates.
 
 create extension if not exists "pgcrypto";
+
+-- ─── TEARDOWN (reverse dependency order) ──────────────────────────────────────
+drop function if exists migrate_guest_to_user(text, uuid);
+drop function if exists validate_pick(uuid, text, uuid, text, int);
+drop function if exists process_round_results(uuid, jsonb, boolean);
+drop table if exists picks          cascade;
+drop table if exists league_members cascade;
+drop table if exists leagues        cascade;
+drop table if exists rounds         cascade;
+drop table if exists competitions   cascade;
+drop table if exists users          cascade;
 
 -- ─── USERS ────────────────────────────────────────────────────────────────────
 create table users (
