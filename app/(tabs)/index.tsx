@@ -15,6 +15,8 @@ import { ActivityFeedItem } from '../../components/home/ActivityFeedItem';
 import { CountdownTimer } from '../../components/ui/CountdownTimer';
 import { SkeletonCard, SkeletonFixture } from '../../components/ui/Skeleton';
 import { Card } from '../../components/ui/Card';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { useAuthModal } from '../../contexts/AuthModal';
 import { Colors, Spacing, Typography } from '../../constants/theme';
 import { useCompetition } from '../../hooks/useCompetition';
 import { useGuestPicks } from '../../hooks/useGuest';
@@ -30,6 +32,7 @@ import { ApiMatch, GuestPick } from '../../types';
 export default function HomeScreen() {
   const { competition, setCompetition } = useCompetition();
   const { user } = useAuth();
+  const { show: showAuth } = useAuthModal();
   const { picks, getPickForRound } = useGuestPicks(competition.id);
 
   const [matchday, setMatchday] = useState<number | null>(null);
@@ -141,15 +144,17 @@ export default function HomeScreen() {
               {/* League activity feed */}
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>League Activity</Text>
-                {user ? (
-                  <Text style={styles.emptyFeed}>
-                    Connect to a league to see your friends' picks here.
-                  </Text>
-                ) : (
-                  <Text style={styles.emptyFeed}>
-                    Sign up and join a league to see activity here.
-                  </Text>
-                )}
+                <EmptyState
+                  icon="🏆"
+                  title="No active leagues yet."
+                  subtitle={
+                    user
+                      ? 'Join a league to see your friends\u2019 picks here.'
+                      : 'Sign up and join a league to see activity here.'
+                  }
+                  ctaLabel={user ? undefined : 'Sign up free'}
+                  onCta={user ? undefined : () => showAuth('Join to create leagues')}
+                />
               </View>
 
               {/* Season picks summary */}
@@ -184,10 +189,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     paddingHorizontal: Spacing.xl,
-    paddingTop: Spacing.base,
-    paddingBottom: Spacing.lg,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.sm,
   },
-  greeting: { fontSize: Typography.sm, color: Colors.textSecondary },
+  greeting: { fontSize: Typography.sm, color: Colors.textSecondary, marginBottom: 2 },
   appName: { fontSize: Typography.xl, fontWeight: Typography.extrabold, color: Colors.text, letterSpacing: -0.5 },
   headerTimer: { alignItems: 'flex-end', gap: 2 },
   headerTimerLabel: { fontSize: 10, color: Colors.textMuted, fontWeight: '600', letterSpacing: 0.5 },
@@ -203,5 +208,4 @@ const styles = StyleSheet.create({
   },
   errorCard: { borderColor: Colors.danger + '40' },
   errorText: { color: Colors.danger, fontSize: Typography.base },
-  emptyFeed: { fontSize: Typography.base, color: Colors.textMuted, lineHeight: 22 },
 });

@@ -19,6 +19,7 @@ export function CompetitionPillRow({ activeId, onSelect }: Props) {
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
+      style={styles.scroll}
       contentContainerStyle={styles.row}
     >
       {COMPETITIONS.map((c) => (
@@ -53,10 +54,14 @@ function Pill({
 }
 
 const styles = StyleSheet.create({
+  scroll: {
+    flexGrow: 0,   // prevents stretching to fill flex parent in non-scroll contexts
+  },
   row: {
     paddingHorizontal: Spacing.xl,
     gap: Spacing.sm,
-    paddingBottom: 2,
+    paddingVertical: Spacing.sm,
+    alignItems: 'center',
   },
   pill: {
     alignItems: 'center',

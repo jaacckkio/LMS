@@ -15,6 +15,7 @@ import { LockInSheet } from '../../components/picks/LockInSheet';
 import { TeamGrid } from '../../components/picks/TeamGrid';
 import { SkeletonFixture } from '../../components/ui/Skeleton';
 import { Card } from '../../components/ui/Card';
+import { EmptyState } from '../../components/ui/EmptyState';
 import { Colors, Spacing, Typography } from '../../constants/theme';
 import { useCompetition } from '../../hooks/useCompetition';
 import { useGuestPicks } from '../../hooks/useGuest';
@@ -195,6 +196,15 @@ export default function PickScreen() {
             />
           )}
           ListHeaderComponent={ListHeader}
+          ListEmptyComponent={
+            <EmptyState
+              icon="📅"
+              title="Upcoming fixtures will appear here."
+              subtitle="Check back closer to the next matchday."
+              ctaLabel={user ? undefined : 'Sign up to make your picks'}
+              onCta={user ? undefined : () => showAuth('Sign up to make your picks')}
+            />
+          }
           ListFooterComponent={ListFooter}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}

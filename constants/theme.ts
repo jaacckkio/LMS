@@ -13,8 +13,8 @@ export const Colors = {
 
   // Text
   text: '#FFFFFF',
-  textSecondary: '#8E8E93',
-  textMuted: '#48484A',
+  textSecondary: '#A3A3A3',
+  textMuted: '#636366',
 
   // UI
   border: '#2C2C2E',

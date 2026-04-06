@@ -17,7 +17,7 @@ function TabIcon({
   return (
     <View style={styles.iconWrap}>
       <Ionicons name={name} size={22} color={focused ? Colors.primary : Colors.textMuted} />
-      <Text style={[styles.label, focused && styles.labelActive]}>{label}</Text>
+      <Text style={[styles.label, focused && styles.labelActive]} numberOfLines={1}>{label}</Text>
     </View>
   );
 }
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
     paddingBottom: Platform.OS === 'ios' ? 24 : 6,
     paddingTop: 8,
   },
-  iconWrap: { alignItems: 'center', gap: 3 },
-  label: { fontSize: 10, fontWeight: '600', color: Colors.textMuted },
+  iconWrap: { alignItems: 'center', gap: 3, minWidth: 60 },
+  label: { fontSize: 10, fontWeight: '600', color: Colors.textMuted, flexShrink: 1 },
   labelActive: { color: Colors.primary },
 });
