@@ -1,12 +1,22 @@
-import React, { useCallback, useRef, useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
-import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
+import React, { useEffect, useRef } from 'react';
+import {
+  View,
+  Modal,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  StyleSheet,
+  Animated,
+  Dimensions,
+} from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Text } from '../ui/Text';
 import { Button } from '../ui/Button';
 import { TeamCrest } from '../ui/TeamCrest';
 import { Colors, Spacing, Radius } from '../../constants/theme';
 import { getTeamById } from '../../constants/teams';
+
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+const SHEET_HEIGHT = 340;
 
 interface Props {
   teamId: string | null;
@@ -16,74 +26,109 @@ interface Props {
 }
 
 export function LockInSheet({ teamId, onLockIn, onDismiss, loading }: Props) {
-  const sheetRef = useRef<BottomSheet>(null);
+  const translateY = useRef(new Animated.Value(SHEET_HEIGHT)).current;
   const team = teamId ? getTeamById(teamId) : null;
+  const visible = !!teamId;
 
   useEffect(() => {
-    if (teamId) {
-      sheetRef.current?.expand();
+    if (visible) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      Animated.spring(translateY, {
+        toValue: 0,
+        useNativeDriver: true,
+        damping: 20,
+        stiffness: 200,
+      }).start();
     } else {
-      sheetRef.current?.close();
+      Animated.timing(translateY, {
+        toValue: SHEET_HEIGHT,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
     }
-  }, [teamId]);
-
-  const handleSheetChange = useCallback(
-    (index: number) => {
-      if (index === -1) onDismiss();
-    },
-    [onDismiss]
-  );
+  }, [visible]);
 
   if (!team) return null;
 
   return (
-    <BottomSheet
-      ref={sheetRef}
-      index={-1}
-      snapPoints={['38%']}
-      enablePanDownToClose
-      onChange={handleSheetChange}
-      backgroundStyle={styles.sheetBg}
-      handleIndicatorStyle={styles.indicator}
+    <Modal
+      visible={visible}
+      transparent
+      animationType="none"
+      onRequestClose={onDismiss}
+      statusBarTranslucent
     >
-      <BottomSheetView style={styles.content}>
-        <TeamCrest uri={team.crest} size={64} />
-        <Text variant="heading" style={styles.title}>
-          Lock in {team.name}?
-        </Text>
-        <Text variant="body" color={Colors.textSecondary} style={styles.subtitle}>
-          This cannot be undone. If {team.shortName} don't win, you're out.
-        </Text>
-        <Button
-          title={`Lock In ${team.shortName}`}
-          onPress={() => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            onLockIn();
-          }}
-          loading={loading}
-          style={styles.btn}
-          haptic={false}
-        />
-        <Button
-          title="Cancel"
-          onPress={onDismiss}
-          variant="ghost"
-          style={styles.cancelBtn}
-        />
-      </BottomSheetView>
-    </BottomSheet>
+      <TouchableWithoutFeedback onPress={onDismiss}>
+        <View style={styles.overlay} />
+      </TouchableWithoutFeedback>
+
+      <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>
+        <View style={styles.handle} />
+
+        <View style={styles.content}>
+          <TeamCrest uri={team.crest} size={64} />
+          <Text variant="heading" style={styles.title}>
+            Lock in {team.name}?
+          </Text>
+          <Text variant="body" color={Colors.textSecondary} style={styles.subtitle}>
+            This cannot be undone. If {team.shortName} don't win, you're out.
+          </Text>
+          <Button
+            title={`Lock In ${team.shortName}`}
+            onPress={() => {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              onLockIn();
+            }}
+            loading={loading}
+            style={styles.btn}
+            haptic={false}
+          />
+          <Button
+            title="Cancel"
+            onPress={onDismiss}
+            variant="ghost"
+            style={styles.cancelBtn}
+          />
+        </View>
+      </Animated.View>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  sheetBg: { backgroundColor: Colors.surfaceElevated },
-  indicator: { backgroundColor: Colors.border },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  sheet: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: SHEET_HEIGHT,
+    backgroundColor: Colors.surfaceElevated,
+    borderTopLeftRadius: Radius.xl,
+    borderTopRightRadius: Radius.xl,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.border,
+    alignSelf: 'center',
+    marginTop: Spacing.md,
+  },
   content: {
     flex: 1,
     alignItems: 'center',
     paddingHorizontal: Spacing.xl,
-    paddingTop: Spacing.md,
+    paddingTop: Spacing.lg,
     gap: Spacing.sm,
   },
   title: { marginTop: Spacing.sm },
