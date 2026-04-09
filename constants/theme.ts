@@ -1,29 +1,46 @@
+// ─── Color tokens ─────────────────────────────────────────────────────────────
+// Survival / elimination aesthetic. Every hue has semantic meaning.
+// Retuned for Phase 1: warmer near-black bg, punchier green, saturated red.
 export const Colors = {
   // Backgrounds
-  background: '#0A0A0A',
-  surface: '#141414',
-  surfaceElevated: '#1E1E1E',
-  surfaceHigh: '#2A2A2A',
+  background: '#0A0A0B',      // near-black, slightly warm
+  surface: '#16161A',         // cards
+  surfaceElevated: '#1F1F25', // modals, sheets
+  surfaceHigh: '#2A2A33',     // highest elevation (chips, nested cards)
+
+  // Alias — semantic clarity where "surfaceElevated" reads as wrong shape
+  bgElevated: '#1F1F25',
 
   // Brand
-  primary: '#00FF87',      // electric green — alive/win
-  danger: '#FF3B30',       // eliminated/loss
-  warning: '#FF9F0A',      // deadline approaching
-  gold: '#FFD700',         // reset-available phase
+  primary: '#22D67E',   // electric green — alive/win
+  danger: '#FF3B47',    // eliminated/loss/sub-24h countdown
+  warning: '#FFB020',   // deadline approaching / locks soon
+  gold: '#FFD700',      // reset-available phase (knockout resets)
 
   // Text
   text: '#FFFFFF',
-  textSecondary: '#A3A3A3',
-  textMuted: '#636366',
+  textSecondary: '#9A9AA3',
+  textMuted: '#5C5C66',
 
   // UI
-  border: '#2C2C2E',
+  border: '#2A2A33',        // default visible border
+  borderStrong: '#3A3A44',  // emphasised border (focus/active cards)
   overlay: 'rgba(0,0,0,0.7)',
 
   // Semantic aliases
-  alive: '#00FF87',
-  eliminated: '#FF3B30',
-  pending: '#FF9F0A',
+  alive: '#22D67E',
+  eliminated: '#FF3B47',
+  pending: '#FFB020',
+} as const;
+
+// ─── Font families ────────────────────────────────────────────────────────────
+// Bebas Neue is a single-weight condensed display face — it reads as bold
+// because of its compression. Loaded via expo-font at app startup.
+// Used for: headlines, big numbers, countdowns, the wordmark.
+// Body text uses the platform system font (no bundled body face — saves ~200kb).
+export const Fonts = {
+  display: 'BebasNeue',
+  body: undefined as string | undefined,
 } as const;
 
 export const Typography = {
