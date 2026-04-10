@@ -59,6 +59,7 @@ const styles = StyleSheet.create({
   },
   row: {
     paddingHorizontal: Spacing.xl,
+    paddingRight: Spacing.xl + 24,  // prevent right-edge truncation
     gap: Spacing.sm,
     paddingVertical: Spacing.sm,
     alignItems: 'center',
@@ -77,7 +78,7 @@ const styles = StyleSheet.create({
   },
   pillActive: {
     borderColor: Colors.primary + '60',
-    backgroundColor: Colors.primary + '12',
+    backgroundColor: Colors.primary + '20',
   },
   flag: { fontSize: 14 },
   name: {

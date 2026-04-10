@@ -17,6 +17,7 @@ import * as Haptics from 'expo-haptics';
 import { useAuthModal } from '../../contexts/AuthModal';
 import { signInWithEmail, signUpWithEmail } from '../../lib/firebase';
 import { Colors, Spacing, Radius, Typography } from '../../constants/theme';
+import { FEATURES } from '../../constants/features';
 import { Button } from '../ui/Button';
 
 const SHEET_HEIGHT = Dimensions.get('window').height * 0.72;
@@ -93,27 +94,30 @@ export function AuthBottomSheet() {
 
           {mode === 'options' ? (
             <View style={styles.options}>
-              <Button
-                title="Continue with Apple"
-                onPress={() => Alert.alert('Coming soon', 'Requires a native build with EAS')}
-                variant="secondary"
-                style={styles.optBtn}
-              />
-              <Button
-                title="Continue with Google"
-                onPress={() => Alert.alert('Coming soon', 'Requires a native build with EAS')}
-                variant="secondary"
-                style={styles.optBtn}
-              />
-              <View style={styles.divider}>
-                <View style={styles.divLine} />
-                <Text style={styles.divText}>or</Text>
-                <View style={styles.divLine} />
-              </View>
+              {FEATURES.socialAuth && (
+                <>
+                  <Button
+                    title="Continue with Apple"
+                    onPress={() => Alert.alert('Coming soon', 'Requires a native build with EAS')}
+                    variant="secondary"
+                    style={styles.optBtn}
+                  />
+                  <Button
+                    title="Continue with Google"
+                    onPress={() => Alert.alert('Coming soon', 'Requires a native build with EAS')}
+                    variant="secondary"
+                    style={styles.optBtn}
+                  />
+                  <View style={styles.divider}>
+                    <View style={styles.divLine} />
+                    <Text style={styles.divText}>or</Text>
+                    <View style={styles.divLine} />
+                  </View>
+                </>
+              )}
               <Button
                 title="Continue with Email"
                 onPress={() => setMode('email')}
-                variant="ghost"
                 style={styles.optBtn}
               />
               <TouchableOpacity onPress={hide} style={styles.guestBtn}>

@@ -21,9 +21,18 @@ interface Props {
   onLockIn: () => void;
   onDismiss: () => void;
   loading?: boolean;
+  /** True when the user is not signed in. Changes copy and CTA label. */
+  isGuest?: boolean;
 }
 
-export function LockInSheet({ team, onLockIn, onDismiss, loading }: Props) {
+/**
+ * Lock-in confirmation sheet.
+ *
+ * When isGuest=true, the CTA reads "Lock In & Sign Up" so the user knows
+ * they'll hit the SignupWall next. The parent is responsible for chaining
+ * into SignupWall after onLockIn fires for guests.
+ */
+export function LockInSheet({ team, onLockIn, onDismiss, loading, isGuest = false }: Props) {
   const translateY = useRef(new Animated.Value(SHEET_HEIGHT)).current;
   const visible = !!team;
 
@@ -45,6 +54,10 @@ export function LockInSheet({ team, onLockIn, onDismiss, loading }: Props) {
     }
   }, [visible]);
 
+  const ctaLabel = isGuest
+    ? `Lock In ${team?.shortName ?? ''} & Sign Up`
+    : `Lock In ${team?.shortName ?? ''}`;
+
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onDismiss} statusBarTranslucent>
       <TouchableWithoutFeedback onPress={onDismiss}>
@@ -57,10 +70,12 @@ export function LockInSheet({ team, onLockIn, onDismiss, loading }: Props) {
           {team && <TeamCrest uri={team.crest} size={68} state="selected" />}
           <Text style={styles.title}>Lock in {team?.shortName ?? ''}?</Text>
           <Text style={styles.subtitle}>
-            This cannot be undone.{'\n'}If {team?.tla} don't win, you're eliminated.
+            {isGuest
+              ? `If ${team?.tla} don't win, you're eliminated.\nYou'll need an account to save this pick.`
+              : `This cannot be undone.\nIf ${team?.tla} don't win, you're eliminated.`}
           </Text>
           <Button
-            title={`Lock In ${team?.shortName ?? ''}`}
+            title={ctaLabel}
             onPress={() => {
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
               onLockIn();

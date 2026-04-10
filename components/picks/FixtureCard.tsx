@@ -12,6 +12,8 @@ interface Props {
   resetTeamTlas: string[];   // teams available again after a reset
   onSelectTeam: (tla: string) => void;
   disabled?: boolean;
+  /** Pick distribution percentages keyed by TLA. */
+  pickDistribution?: Map<string, number>;
 }
 
 export function FixtureCard({
@@ -21,6 +23,7 @@ export function FixtureCard({
   resetTeamTlas,
   onSelectTeam,
   disabled = false,
+  pickDistribution,
 }: Props) {
   const locked = isMatchLocked(match.utcDate) || disabled;
   const isLive =
@@ -86,6 +89,7 @@ export function FixtureCard({
         state={homeState}
         onPress={() => canPick(homeTeam.tla) && onSelectTeam(homeTeam.tla)}
         side="home"
+        pickPct={pickDistribution?.get(homeTeam.tla)}
       />
 
       <View style={styles.centre}>{centreContent()}</View>
@@ -95,6 +99,7 @@ export function FixtureCard({
         state={awayState}
         onPress={() => canPick(awayTeam.tla) && onSelectTeam(awayTeam.tla)}
         side="away"
+        pickPct={pickDistribution?.get(awayTeam.tla)}
       />
     </View>
   );
@@ -105,11 +110,13 @@ function TeamSide({
   state,
   onPress,
   side,
+  pickPct,
 }: {
   team: ApiMatch['homeTeam'];
   state: 'default' | 'used' | 'selected' | 'reset' | 'eliminated';
   onPress: () => void;
   side: 'home' | 'away';
+  pickPct?: number;
 }) {
   const isSelected = state === 'selected';
   const isUsed = state === 'used';
@@ -127,6 +134,9 @@ function TeamSide({
     >
       <TeamCrest uri={team.crest} size={52} state={state} />
       <Text style={[styles.tla, isUsed && styles.tlaUsed]}>{team.tla}</Text>
+      {pickPct != null && (
+        <Text style={styles.pickPct}>{pickPct}% picked</Text>
+      )}
       {isUsed && <Text style={styles.usedTag}>Used</Text>}
       {state === 'reset' && <Text style={styles.resetTag}>Reset</Text>}
     </TouchableOpacity>
@@ -171,6 +181,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textDecorationLine: 'line-through',
     textDecorationColor: Colors.textMuted,
+  },
+  pickPct: {
+    fontSize: 10,
+    color: Colors.textMuted,
+    fontWeight: '600',
+    fontVariant: ['tabular-nums'] as const,
   },
   resetTag: {
     fontSize: 10,
