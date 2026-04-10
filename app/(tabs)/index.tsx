@@ -194,7 +194,7 @@ export default function HomeScreen() {
                       key={league.id}
                       league={league}
                       userStatus={leagueStatuses[league.id] ?? null}
-                      onPress={() => {/* TODO: navigate to league detail */}}
+                      onPress={() => router.push('/(tabs)/leagues')}
                     />
                   ))}
                 </View>

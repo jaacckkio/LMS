@@ -71,7 +71,7 @@ export default function ProfileScreen() {
             </Text>
 
             <Button
-              title="Sign Up Free"
+              title="Start Your Streak"
               onPress={() => showAuth('Create an account to save your progress')}
               style={styles.fullWidth}
             />
