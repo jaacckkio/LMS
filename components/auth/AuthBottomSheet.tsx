@@ -94,6 +94,9 @@ export function AuthBottomSheet() {
 
           {mode === 'options' ? (
             <View style={styles.options}>
+              {/* TODO: when social auth flag flips, all three buttons (Apple/Google/Email)
+                  should be visually equal-weighted — currently Apple/Google are variant="secondary"
+                  and Email is primary. Equalize before re-enabling. */}
               {FEATURES.socialAuth && (
                 <>
                   <Button
@@ -193,8 +196,8 @@ const styles = StyleSheet.create({
   reason: {
     fontSize: Typography.base,
     fontWeight: Typography.semibold,
-    color: Colors.primary,
-    marginBottom: Spacing.sm,
+    color: Colors.text,
+    marginBottom: Spacing.xs,
     textAlign: 'center',
   },
   title: {
