@@ -33,6 +33,16 @@ export const Colors = {
   pending: '#FFB020',
 } as const;
 
+/**
+ * Third-party brand colors. Fixed by external brand guidelines — not part
+ * of the design system palette, but kept here so every color in the repo
+ * lives in one file. Only use these for the exact platform they belong to.
+ */
+export const BrandColors = {
+  whatsapp: '#25D366',
+  iMessage: '#007AFF',
+} as const;
+
 // ─── Font families ────────────────────────────────────────────────────────────
 // Bebas Neue is a single-weight condensed display face — it reads as bold
 // because of its compression. Loaded via expo-font at app startup.
