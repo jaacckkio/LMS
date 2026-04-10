@@ -116,7 +116,11 @@ export default function LeaguesScreen() {
         stake: params.stake || undefined,
         userId: user.uid,
       });
-      // Dismiss create modal, then open created sheet after a frame
+      // RN Modal can't handle two modals transitioning simultaneously —
+      // dismissing one and presenting another in the same tick causes the
+      // second to not appear. The rAF defer waits one frame so the dismiss
+      // completes before the present begins.
+      // Do not remove or wrap in setState batching.
       setModal(null);
       setCreateLoading(false);
       requestAnimationFrame(() => {
