@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   ScrollView,
@@ -9,68 +9,88 @@ import {
   Alert,
   Share,
   Modal,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LeagueCard } from '../../components/leagues/LeagueCard';
 import { MemberRow } from '../../components/leagues/MemberRow';
+import { CreateLeagueForm } from '../../components/leagues/CreateLeagueForm';
+import { LeagueCreatedSheet } from '../../components/leagues/LeagueCreatedSheet';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Colors, Spacing, Radius, Typography } from '../../constants/theme';
 import { useAuth } from '../../hooks/useAuth';
 import { useAuthModal } from '../../contexts/AuthModal';
 import { useCompetition } from '../../hooks/useCompetition';
-import { League, LeagueMember } from '../../types';
+import { League, LeagueMember, MemberStatus } from '../../types';
+import {
+  getUserLeagues,
+  getUserStatus,
+  getLeagueMembers,
+  createLeague,
+  joinLeague,
+} from '../../lib/leagueQueries';
 
-// Mock leagues — replace with Supabase queries
-const MOCK_GLOBAL: League = {
-  id: 'global',
-  name: 'Global LMS — Premier League',
-  competitionId: 'PL',
-  type: 'GLOBAL',
-  inviteCode: 'GLOBAL',
-  createdBy: 'system',
-  createdAt: '',
-  totalMembers: 18_420,
-  aliveMembers: 1_203,
-};
-
-const MOCK_PRIVATE: League[] = [
-  {
-    id: 'l1',
-    name: 'The Office Pool',
-    competitionId: 'PL',
-    type: 'PRIVATE',
-    inviteCode: 'OFF1CE',
-    createdBy: 'u1',
-    createdAt: '',
-    totalMembers: 14,
-    aliveMembers: 8,
-  },
-];
-
-const MOCK_MEMBERS: LeagueMember[] = [
-  { id: 'm1', leagueId: 'l1', userId: 'u1', deviceId: null, displayName: 'You', status: 'ALIVE', roundsSurvived: 6, joinedAt: '' },
-  { id: 'm2', leagueId: 'l1', userId: 'u2', deviceId: null, displayName: 'Jamie', status: 'ALIVE', roundsSurvived: 5, joinedAt: '' },
-  { id: 'm3', leagueId: 'l1', userId: 'u3', deviceId: null, displayName: 'Sarah', status: 'ALIVE', roundsSurvived: 4, joinedAt: '' },
-  { id: 'm4', leagueId: 'l1', userId: 'u4', deviceId: null, displayName: 'Pedro', status: 'ELIMINATED', eliminatedRound: 28, roundsSurvived: 3, joinedAt: '' },
-  { id: 'm5', leagueId: 'l1', userId: 'u5', deviceId: null, displayName: 'Kate', status: 'ELIMINATED', eliminatedRound: 27, roundsSurvived: 2, joinedAt: '' },
-];
-
-type ModalType = 'create' | 'join' | 'detail' | null;
+type ModalState = 'create' | 'join' | 'detail' | null;
 
 export default function LeaguesScreen() {
   const { user } = useAuth();
   const { show: showAuth } = useAuthModal();
   const { competition } = useCompetition();
 
-  const [modal, setModal] = useState<ModalType>(null);
+  const [modal, setModal] = useState<ModalState>(null);
   const [selectedLeague, setSelectedLeague] = useState<League | null>(null);
-  const [newName, setNewName] = useState('');
+  const [createdLeague, setCreatedLeague] = useState<League | null>(null);
   const [joinCode, setJoinCode] = useState('');
-  const [createdCode, setCreatedCode] = useState<string | null>(null);
-  const [createLoading, setCreateLoading] = useState(false);
   const [joinLoading, setJoinLoading] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
 
+  // Data from leagueQueries
+  const [globalLeagues, setGlobalLeagues] = useState<League[]>([]);
+  const [privateLeagues, setPrivateLeagues] = useState<League[]>([]);
+  const [leagueStatuses, setLeagueStatuses] = useState<Record<string, MemberStatus | 'GUEST' | null>>({});
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Detail modal data
+  const [detailMembers, setDetailMembers] = useState<LeagueMember[]>([]);
+
+  const load = useCallback(async () => {
+    try {
+      const leagues = await getUserLeagues(user?.uid ?? null, null);
+
+      const globals = leagues.filter((l) => l.type === 'GLOBAL');
+      const privates = leagues.filter((l) => l.type === 'PRIVATE');
+      setGlobalLeagues(globals);
+      setPrivateLeagues(privates);
+
+      // Load statuses for all leagues
+      const statuses: Record<string, MemberStatus | 'GUEST' | null> = {};
+      for (const l of leagues) {
+        statuses[l.id] = user
+          ? await getUserStatus(l.id, user.uid, null)
+          : 'GUEST';
+      }
+      setLeagueStatuses(statuses);
+    } catch {
+      // silently fail — data will be empty
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    setLoading(true);
+    load();
+  }, [user, competition.id]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    load();
+  }, [load]);
+
+  // Auth gate for create/join — creating leagues genuinely needs a user record
   const requireAuth = (action: () => void) => {
     if (!user) {
       showAuth('Sign up to create and join leagues');
@@ -79,132 +99,164 @@ export default function LeaguesScreen() {
     }
   };
 
-  const handleCreate = () => {
-    if (!newName.trim()) return;
-    setCreateLoading(true);
-    setTimeout(() => {
-      setCreatedCode(Math.random().toString(36).slice(2, 8).toUpperCase());
-      setCreateLoading(false);
-    }, 600);
-  };
+  const handleOpenDetail = useCallback(async (league: League) => {
+    setSelectedLeague(league);
+    setModal('detail');
+    const members = await getLeagueMembers(league.id);
+    setDetailMembers(members);
+  }, []);
 
-  const handleJoin = () => {
+  const handleCreate = useCallback(async (params: { name: string; competitionId: string; stake: string }) => {
+    if (!user) return;
+    setCreateLoading(true);
+    try {
+      const league = await createLeague({
+        name: params.name,
+        competitionId: params.competitionId,
+        stake: params.stake || undefined,
+        userId: user.uid,
+      });
+      // Dismiss create modal, then open created sheet after a frame
+      setModal(null);
+      setCreateLoading(false);
+      requestAnimationFrame(() => {
+        setCreatedLeague(league);
+      });
+    } catch {
+      Alert.alert('Error', 'Could not create league. Try again.');
+      setCreateLoading(false);
+    }
+  }, [user]);
+
+  const handleJoin = useCallback(async () => {
     if (joinCode.length !== 6) {
       Alert.alert('Invalid code', 'Enter a 6-character code');
       return;
     }
     setJoinLoading(true);
-    setTimeout(() => {
+    try {
+      const league = await joinLeague(joinCode, user?.uid ?? null, null);
+      if (league) {
+        setModal(null);
+        setJoinCode('');
+        load(); // refresh list
+      } else {
+        Alert.alert('Not found', 'No league found with that code.');
+      }
+    } catch {
+      Alert.alert('Error', 'Could not join league. Try again.');
+    } finally {
       setJoinLoading(false);
-      setModal(null);
-      setJoinCode('');
-    }, 600);
-  };
+    }
+  }, [joinCode, user, load]);
 
-  const alive = MOCK_MEMBERS.filter((m) => m.status === 'ALIVE');
-  const eliminated = MOCK_MEMBERS.filter((m) => m.status === 'ELIMINATED');
+  const alive = detailMembers.filter((m) => m.status === 'ALIVE');
+  const eliminated = detailMembers.filter((m) => m.status === 'ELIMINATED');
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
+      >
+        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Leagues</Text>
           <View style={styles.actions}>
-            <TouchableOpacity style={styles.joinBtn} onPress={() => requireAuth(() => { setJoinCode(''); setModal('join'); })}>
-              <Text style={styles.joinBtnText}>Join</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.createBtn} onPress={() => requireAuth(() => { setCreatedCode(null); setNewName(''); setModal('create'); })}>
-              <Text style={styles.createBtnText}>+ Create</Text>
-            </TouchableOpacity>
+            <Button
+              title="Join"
+              onPress={() => requireAuth(() => { setJoinCode(''); setModal('join'); })}
+              variant="secondary"
+              size="sm"
+            />
+            <Button
+              title="+ Create"
+              onPress={() => requireAuth(() => setModal('create'))}
+              size="sm"
+            />
           </View>
         </View>
 
+        {/* Guest banner */}
         {!user && (
           <Card style={styles.guestBanner}>
             <Text style={styles.guestText}>
               Sign up to create private leagues and compete with friends.
             </Text>
-            <TouchableOpacity onPress={() => showAuth('Join to create leagues')}>
-              <Text style={styles.guestCta}>Sign up free →</Text>
-            </TouchableOpacity>
           </Card>
         )}
 
-        {/* Global league — always shown */}
-        <Text style={styles.sectionLabel}>Global</Text>
-        <LeagueCard
-          league={MOCK_GLOBAL}
-          userStatus={user ? 'ALIVE' : 'GUEST'}
-          onPress={() => { setSelectedLeague(MOCK_GLOBAL); setModal('detail'); }}
-        />
-
-        {/* Private leagues */}
-        {user && MOCK_PRIVATE.length > 0 && (
+        {/* Global leagues */}
+        {globalLeagues.length > 0 && (
           <>
-            <Text style={styles.sectionLabel}>Private</Text>
-            {MOCK_PRIVATE.map((l) => (
+            <Text style={styles.sectionLabel}>Global</Text>
+            {globalLeagues.map((l) => (
               <LeagueCard
                 key={l.id}
                 league={l}
-                userStatus="ALIVE"
-                onPress={() => { setSelectedLeague(l); setModal('detail'); }}
+                userStatus={leagueStatuses[l.id] ?? null}
+                onPress={() => handleOpenDetail(l)}
+              />
+            ))}
+          </>
+        )}
+
+        {/* Private leagues */}
+        {privateLeagues.length > 0 && (
+          <>
+            <Text style={styles.sectionLabel}>Private</Text>
+            {privateLeagues.map((l) => (
+              <LeagueCard
+                key={l.id}
+                league={l}
+                userStatus={leagueStatuses[l.id] ?? null}
+                onPress={() => handleOpenDetail(l)}
               />
             ))}
           </>
         )}
       </ScrollView>
 
-      {/* Create League Modal */}
+      {/* ── Create League Modal ── */}
       <Modal visible={modal === 'create'} animationType="slide" presentationStyle="pageSheet">
         <SafeAreaView style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Create League</Text>
             <TouchableOpacity onPress={() => setModal(null)}>
-              <Text style={styles.closeBtn}>✕</Text>
+              <Text style={styles.closeBtn}>{'\u2715'}</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.modalBody}>
-            {createdCode ? (
-              <View style={styles.codeResult}>
-                <Text style={styles.successEmoji}>🏆</Text>
-                <Text style={styles.successTitle}>League Created!</Text>
-                <Card elevated style={styles.codeCard}>
-                  <Text style={styles.codeLabel}>Share this code</Text>
-                  <Text style={styles.bigCode}>{createdCode}</Text>
-                  <Text style={styles.codeName}>{newName}</Text>
-                </Card>
-                <Button title="Share Code" onPress={() => Share.share({ message: `Join my LMS league! Code: ${createdCode}` })} style={styles.fullBtn} />
-                <Button title="Done" onPress={() => setModal(null)} variant="secondary" style={styles.fullBtn} />
-              </View>
-            ) : (
-              <>
-                <Text style={styles.fieldLabel}>League Name</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="e.g. The Office Pool"
-                  placeholderTextColor={Colors.textMuted}
-                  value={newName}
-                  onChangeText={setNewName}
-                  autoFocus
-                />
-                <Button title="Create" onPress={handleCreate} loading={createLoading} style={styles.fullBtn} />
-              </>
-            )}
+            <CreateLeagueForm
+              onSubmit={handleCreate}
+              loading={createLoading}
+              defaultCompetitionId={competition.id}
+            />
           </View>
         </SafeAreaView>
       </Modal>
 
-      {/* Join League Modal */}
+      {/* ── League Created Sheet ── */}
+      <LeagueCreatedSheet
+        league={createdLeague}
+        onDismiss={() => {
+          setCreatedLeague(null);
+          load(); // refresh list to show new league
+        }}
+      />
+
+      {/* ── Join League Modal ── */}
       <Modal visible={modal === 'join'} animationType="slide" presentationStyle="pageSheet">
         <SafeAreaView style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Join League</Text>
             <TouchableOpacity onPress={() => setModal(null)}>
-              <Text style={styles.closeBtn}>✕</Text>
+              <Text style={styles.closeBtn}>{'\u2715'}</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.modalBody}>
-            <Text style={styles.fieldLabel}>6-Character Code</Text>
+            <Text style={styles.fieldLabel}>6-CHARACTER CODE</Text>
             <TextInput
               style={[styles.input, styles.codeInput]}
               placeholder="ABC123"
@@ -215,25 +267,28 @@ export default function LeaguesScreen() {
               autoCapitalize="characters"
               autoFocus
             />
-            <Button title="Join" onPress={handleJoin} loading={joinLoading} style={styles.fullBtn} />
+            <Button title="Join" onPress={handleJoin} loading={joinLoading} />
           </View>
         </SafeAreaView>
       </Modal>
 
-      {/* League Detail Modal */}
+      {/* ── League Detail Modal ── */}
       <Modal visible={modal === 'detail'} animationType="slide" presentationStyle="pageSheet">
         <SafeAreaView style={styles.modalContainer}>
           {selectedLeague && (
             <>
               <View style={styles.modalHeader}>
-                <View>
+                <View style={styles.detailTitleWrap}>
                   <Text style={styles.modalTitle}>{selectedLeague.name}</Text>
+                  {selectedLeague.stake && (
+                    <Text style={styles.detailStake}>{selectedLeague.stake}</Text>
+                  )}
                   {selectedLeague.type === 'PRIVATE' && (
                     <Text style={styles.inviteCode}>Code: {selectedLeague.inviteCode}</Text>
                   )}
                 </View>
-                <TouchableOpacity onPress={() => setModal(null)}>
-                  <Text style={styles.closeBtn}>✕</Text>
+                <TouchableOpacity onPress={() => { setModal(null); setDetailMembers([]); }}>
+                  <Text style={styles.closeBtn}>{'\u2715'}</Text>
                 </TouchableOpacity>
               </View>
 
@@ -244,23 +299,31 @@ export default function LeaguesScreen() {
               </View>
 
               <ScrollView contentContainerStyle={styles.memberList}>
-                <Text style={styles.sectionLabel}>Alive ({alive.length})</Text>
-                {alive.map((m, i) => (
-                  <MemberRow key={m.id} member={m} rank={i + 1} pickHidden={true} />
-                ))}
-                <Text style={[styles.sectionLabel, { marginTop: Spacing.lg }]}>
-                  Eliminated ({eliminated.length})
-                </Text>
-                {eliminated.map((m, i) => (
-                  <MemberRow key={m.id} member={m} rank={alive.length + i + 1} pickHidden={false} />
-                ))}
+                {alive.length > 0 && (
+                  <>
+                    <Text style={styles.sectionLabel}>Alive ({alive.length})</Text>
+                    {alive.map((m, i) => (
+                      <MemberRow key={m.id} member={m} rank={i + 1} pickHidden={true} />
+                    ))}
+                  </>
+                )}
+                {eliminated.length > 0 && (
+                  <>
+                    <Text style={[styles.sectionLabel, alive.length > 0 && { marginTop: Spacing.lg }]}>
+                      Eliminated ({eliminated.length})
+                    </Text>
+                    {eliminated.map((m, i) => (
+                      <MemberRow key={m.id} member={m} rank={alive.length + i + 1} pickHidden={false} />
+                    ))}
+                  </>
+                )}
               </ScrollView>
 
               {selectedLeague.type === 'PRIVATE' && (
                 <View style={styles.shareWrap}>
                   <Button
                     title="Share Invite"
-                    onPress={() => Share.share({ message: `Join my LMS league! Code: ${selectedLeague.inviteCode}` })}
+                    onPress={() => Share.share({ message: `Join my Last Man Standing league! Code: ${selectedLeague.inviteCode}` })}
                     variant="secondary"
                   />
                 </View>
@@ -285,40 +348,81 @@ function Stat({ label, value, color }: { label: string; value: string; color: st
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   scroll: { paddingHorizontal: Spacing.xl, paddingBottom: Spacing['4xl'], gap: Spacing.sm },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: Spacing.base },
-  title: { fontSize: Typography.xl, fontWeight: Typography.extrabold, color: Colors.text, letterSpacing: -0.5 },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: Spacing.base,
+  },
+  title: {
+    fontSize: Typography.xl,
+    fontWeight: '800',
+    color: Colors.text,
+    letterSpacing: -0.5,
+  },
   actions: { flexDirection: 'row', gap: Spacing.sm },
-  joinBtn: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.border },
-  joinBtnText: { fontSize: Typography.sm, fontWeight: '600', color: Colors.textSecondary },
-  createBtn: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: Radius.md, backgroundColor: Colors.primary },
-  createBtnText: { fontSize: Typography.sm, fontWeight: '700', color: Colors.background },
   guestBanner: { borderColor: Colors.primary + '30' },
-  guestText: { fontSize: Typography.base, color: Colors.textSecondary, lineHeight: 22, marginBottom: Spacing.sm },
-  guestCta: { fontSize: Typography.base, fontWeight: '700', color: Colors.primary },
-  sectionLabel: { fontSize: Typography.xs, fontWeight: '700', color: Colors.textMuted, letterSpacing: 0.8, textTransform: 'uppercase', marginTop: Spacing.sm },
+  guestText: {
+    fontSize: Typography.base,
+    color: Colors.textSecondary,
+    lineHeight: 22,
+  },
+  sectionLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.sm,
+  },
+  // Modals
   modalContainer: { flex: 1, backgroundColor: Colors.background },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', padding: Spacing.xl },
-  modalTitle: { fontSize: Typography.lg, fontWeight: Typography.bold, color: Colors.text },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    padding: Spacing.xl,
+  },
+  modalTitle: { fontSize: Typography.lg, fontWeight: '800', color: Colors.text },
+  detailTitleWrap: { flex: 1, marginRight: Spacing.md },
+  detailStake: { fontSize: Typography.sm, color: Colors.textSecondary, fontStyle: 'italic', marginTop: 2 },
   inviteCode: { fontSize: Typography.sm, color: Colors.textMuted, marginTop: 2 },
   closeBtn: { fontSize: 18, color: Colors.textSecondary, padding: Spacing.sm },
   modalBody: { paddingHorizontal: Spacing.xl, gap: Spacing.md, flex: 1 },
-  fieldLabel: { fontSize: Typography.sm, color: Colors.textSecondary, fontWeight: '600' },
+  fieldLabel: {
+    fontSize: Typography.xs,
+    fontWeight: '700',
+    color: Colors.textMuted,
+    letterSpacing: 0.8,
+  },
   input: {
-    backgroundColor: Colors.surfaceElevated, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.border,
-    paddingHorizontal: Spacing.base, paddingVertical: Spacing.md, color: Colors.text, fontSize: Typography.base,
+    backgroundColor: Colors.surfaceElevated,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.md,
+    color: Colors.text,
+    fontSize: Typography.base,
   },
   codeInput: { textAlign: 'center', fontSize: 24, fontWeight: '800', letterSpacing: 6 },
-  fullBtn: {},
-  codeResult: { alignItems: 'center', gap: Spacing.md },
-  successEmoji: { fontSize: 48 },
-  successTitle: { fontSize: Typography.xl, fontWeight: Typography.bold, color: Colors.text },
-  codeCard: { width: '100%', alignItems: 'center', gap: Spacing.sm, paddingVertical: Spacing.xl },
-  codeLabel: { fontSize: Typography.xs, fontWeight: '700', color: Colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 },
-  bigCode: { fontSize: 44, fontWeight: '800', letterSpacing: 8, color: Colors.primary },
-  codeName: { fontSize: Typography.sm, color: Colors.textSecondary },
-  statsRow: { flexDirection: 'row', paddingHorizontal: Spacing.xl, gap: Spacing.sm, marginBottom: Spacing.base },
-  stat: { flex: 1, alignItems: 'center', backgroundColor: Colors.surface, borderRadius: Radius.md, paddingVertical: Spacing.md, borderWidth: 1, borderColor: Colors.border },
-  statValue: { fontSize: Typography.xl, fontWeight: Typography.extrabold },
+  statsRow: {
+    flexDirection: 'row',
+    paddingHorizontal: Spacing.xl,
+    gap: Spacing.sm,
+    marginBottom: Spacing.base,
+  },
+  stat: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  statValue: { fontSize: Typography.xl, fontWeight: '800' },
   statLabel: { fontSize: Typography.xs, color: Colors.textMuted, fontWeight: '600', marginTop: 2 },
   memberList: { paddingHorizontal: Spacing.xl, paddingBottom: Spacing['4xl'] },
   shareWrap: { paddingHorizontal: Spacing.xl, paddingBottom: Spacing.xl },
