@@ -9,8 +9,6 @@ interface Props {
   league: League;
   userStatus: 'ALIVE' | 'ELIMINATED' | 'GUEST' | null;
   onPress: () => void;
-  /** Optional stake subtitle. */
-  stake?: string | null;
 }
 
 const STATUS_STYLE = {
@@ -19,7 +17,7 @@ const STATUS_STYLE = {
   GUEST: { bg: Colors.textMuted + '20', color: Colors.textMuted, label: 'GUEST' },
 } as const;
 
-export function LeagueCard({ league, userStatus, onPress, stake }: Props) {
+export function LeagueCard({ league, userStatus, onPress }: Props) {
   const competition = getCompetition(league.competitionId);
   const statusStyle = userStatus ? STATUS_STYLE[userStatus] : null;
 
@@ -38,7 +36,7 @@ export function LeagueCard({ league, userStatus, onPress, stake }: Props) {
         <Text style={styles.flag}>{competition.flag}</Text>
         <View style={styles.nameWrap}>
           <Text style={styles.name} numberOfLines={2}>{league.name}</Text>
-          {stake ? <Text style={styles.stake}>{stake}</Text> : null}
+          {league.stake ? <Text style={styles.stake}>{league.stake}</Text> : null}
         </View>
         {statusStyle && (
           <View style={[styles.statusPill, { backgroundColor: statusStyle.bg }]}>

@@ -90,6 +90,7 @@ export interface League {
   createdAt: string;
   totalMembers: number;
   aliveMembers: number;
+  stake?: string;
 }
 
 export interface LeagueMember {

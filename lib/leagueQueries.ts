@@ -42,6 +42,7 @@ const MOCK_LEAGUES: League[] = [
     createdAt: '2025-08-15T09:30:00Z',
     totalMembers: 14,
     aliveMembers: 4,
+    stake: 'Loser buys drinks',
   },
   {
     id: 'priv-sunday',
@@ -53,6 +54,7 @@ const MOCK_LEAGUES: League[] = [
     createdAt: '2025-09-01T12:00:00Z',
     totalMembers: 23,
     aliveMembers: 7,
+    stake: 'Bragging rights',
   },
   {
     id: 'priv-workmates',
@@ -64,14 +66,9 @@ const MOCK_LEAGUES: League[] = [
     createdAt: '2025-09-10T08:00:00Z',
     totalMembers: 8,
     aliveMembers: 3,
+    stake: '\u00A320 each',
   },
 ];
-
-const MOCK_STAKES: Record<string, string> = {
-  'priv-office': 'Loser buys drinks',
-  'priv-sunday': 'Bragging rights',
-  'priv-workmates': '\u00A320 each',
-};
 
 const MOCK_USER_STATUS: Record<string, MemberStatus | 'GUEST'> = {
   'gl-pl-2025': 'ALIVE',
@@ -119,11 +116,6 @@ export async function getUserStatus(
   return MOCK_USER_STATUS[leagueId] ?? null;
 }
 
-/** Stake text for a league (optional, user-provided on creation). */
-export async function getLeagueStake(leagueId: string): Promise<string | null> {
-  return MOCK_STAKES[leagueId] ?? null;
-}
-
 /** Members of a league, sorted by status (alive first) then rounds survived. */
 export async function getLeagueMembers(leagueId: string): Promise<LeagueMember[]> {
   // TODO: swap with supabase.from('league_members').select('*').eq('league_id', leagueId)
@@ -155,6 +147,7 @@ export async function createLeague(params: {
     createdAt: new Date().toISOString(),
     totalMembers: 1,
     aliveMembers: 1,
+    stake: params.stake || undefined,
   };
   return league;
 }

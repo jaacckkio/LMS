@@ -11,6 +11,7 @@ import {
   Share,
   Text,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { Button } from '../ui/Button';
 import { Colors, Spacing, Radius, Typography, Fonts, BrandColors } from '../../constants/theme';
@@ -21,7 +22,6 @@ const SHEET_HEIGHT = 520;
 
 interface Props {
   league: League | null;
-  stake?: string;
   onDismiss: () => void;
 }
 
@@ -30,7 +30,7 @@ interface Props {
  * Shows league card preview, invite code, and contextual share buttons.
  * Modal + Animated + translateY spring pattern (no Reanimated).
  */
-export function LeagueCreatedSheet({ league, stake, onDismiss }: Props) {
+export function LeagueCreatedSheet({ league, onDismiss }: Props) {
   const translateY = useRef(new Animated.Value(SHEET_HEIGHT)).current;
   const visible = !!league;
 
@@ -65,7 +65,7 @@ export function LeagueCreatedSheet({ league, stake, onDismiss }: Props) {
 
   const shareMessage = [
     `\u{1F480} I just started a Last Man Standing league: ${league.name}`,
-    `Pick one team to win each week. Pick wrong, you're out. Last one standing wins${stake ? ` ${stake}` : ''}.`,
+    `Pick one team to win each week. Pick wrong, you're out. Last one standing wins${league.stake ? ` ${league.stake}` : ''}.`,
     `Join with code ${league.inviteCode}`,
   ].join('\n');
 
@@ -85,8 +85,7 @@ export function LeagueCreatedSheet({ league, stake, onDismiss }: Props) {
   };
 
   const handleCopyCode = async () => {
-    // Use Share.share as a copy fallback — avoids needing expo-clipboard
-    await Share.share({ message: league.inviteCode });
+    await Clipboard.setStringAsync(league.inviteCode);
     setCopied(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setTimeout(() => setCopied(false), 2000);
@@ -112,7 +111,7 @@ export function LeagueCreatedSheet({ league, stake, onDismiss }: Props) {
         {/* League preview card */}
         <View style={styles.previewCard}>
           <Text style={styles.previewName}>{league.name}</Text>
-          {stake ? <Text style={styles.previewStake}>{stake}</Text> : null}
+          {league.stake ? <Text style={styles.previewStake}>{league.stake}</Text> : null}
           <View style={styles.previewRow}>
             <Text style={styles.previewFlag}>{competition.flag}</Text>
             <Text style={styles.previewComp}>{competition.shortName}</Text>
