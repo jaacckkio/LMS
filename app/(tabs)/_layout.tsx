@@ -3,6 +3,8 @@ import { View, StyleSheet, Platform, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '../../constants/theme';
 import { useAuth } from '../../hooks/useAuth';
+import { useCompetition } from '../../hooks/useCompetition';
+import { useUnmadePick } from '../../hooks/useUnmadePick';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -30,11 +32,12 @@ function TabIcon({
 
 export default function TabLayout() {
   const { user } = useAuth();
+  const { competition } = useCompetition();
+  const { hasUnmadePick, deadlineWithin24h } = useUnmadePick(competition.apiId, competition.id);
 
   // Red dot badge on "This Week" tab:
   // Shows when signed-in user has an unmade pick and deadline is <24h.
-  // Stubbed false — requires a hook to check current-gameweek pick state.
-  const showPickBadge = false; // TODO: derive from pick state + deadline proximity
+  const showPickBadge = hasUnmadePick && deadlineWithin24h;
 
   return (
     <Tabs

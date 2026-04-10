@@ -101,16 +101,16 @@ Every stub, mock, and hardcoded value introduced in Phases 1–3 that needs real
 
 ## 11. Red dot badge: unmade pick detection
 
-**Where stubbed:** `app/(tabs)/_layout.tsx` — `showPickBadge = false`
-**Needs:** Hook that checks: (a) user has no pick for current gameweek, (b) deadline is <24h away
-**Expected source:** Combine `getPickForRound()` from guest picks + `getCurrentMatchday()` + `getRoundDeadline()`
-**Used by:** Tab bar badge on "This Week" tab
+**Status:** RESOLVED in Phase 4 — `useUnmadePick` hook now derives this from `getCurrentMatchday()` + `getPickForRound()` + `getRoundDeadline()`.
+**Where wired:** `hooks/useUnmadePick.ts` → `app/(tabs)/_layout.tsx`
+**Remaining gap:** None — works with existing API data. Badge shows when user has no pick and deadline is <24h.
 
 ---
 
 ## 12. Guest pick migration on signup
 
-**Where stubbed:** `components/auth/SignupWall.tsx` — comment says "guest migration handles the rest"
-**Needs:** Cloud function or RPC that copies AsyncStorage picks to the user's server-side record on first auth
+**Where stubbed:** `app/(tabs)/pick.tsx:handleSignupComplete` — `console.log('[migration] would migrate guest pick:', pendingGuestPick)`
+**Needs:** Firebase↔Supabase JWT bridging, then call `migrate_guest_picks` RPC
 **Expected RPC:** `rpc migrate_guest_picks(user_id uuid, picks jsonb)`
-**Used by:** Post-signup flow
+**Expected input:** All picks from `getAllGuestPicks()` in `lib/storage.ts`
+**Used by:** Post-signup flow in pick screen

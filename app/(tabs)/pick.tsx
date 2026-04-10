@@ -165,10 +165,15 @@ export default function PickScreen() {
   }, [selectedTeam, matchday, user, competition.id, savePick]);
 
   const handleSignupComplete = useCallback(() => {
+    // Pick was already saved locally. Now that the user is authed,
+    // migrate guest picks to their server-side record.
+    if (pendingGuestPick) {
+      // TODO: call migrate_guest_picks RPC when Firebase↔Supabase JWT bridging is ready
+      console.log('[migration] would migrate guest pick:', pendingGuestPick);
+    }
     setShowSignupWall(false);
     setPendingGuestPick(null);
-    // Pick was already saved — user is now authed, guest migration handles the rest
-  }, []);
+  }, [pendingGuestPick]);
 
   const handleSignupDismiss = useCallback(() => {
     setShowSignupWall(false);
