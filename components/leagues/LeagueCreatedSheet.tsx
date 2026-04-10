@@ -139,7 +139,7 @@ export function LeagueCreatedSheet({ league, onDismiss }: Props) {
               title="Share to WhatsApp"
               onPress={handleWhatsApp}
               style={{ ...styles.shareBtn, backgroundColor: BrandColors.whatsapp }}
-              textStyle={{ color: '#FFFFFF' }}
+              textStyle={{ color: Colors.text }}
               variant="primary"
             />
           )}
@@ -147,7 +147,7 @@ export function LeagueCreatedSheet({ league, onDismiss }: Props) {
             title={Platform.OS === 'ios' ? 'Share to iMessage' : 'Share to Messages'}
             onPress={handleMessages}
             style={{ ...styles.shareBtn, backgroundColor: BrandColors.iMessage }}
-            textStyle={{ color: '#FFFFFF' }}
+            textStyle={{ color: Colors.text }}
             variant="primary"
           />
           <Button

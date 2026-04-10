@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View, ViewStyle } from 'react-native';
-import { Colors, Radius } from '../../constants/theme';
+import { Colors, Radius, Spacing } from '../../constants/theme';
 
 interface Props {
   width?: number | `${number}%`;
@@ -34,7 +34,7 @@ export function SkeletonCard({ style }: { style?: ViewStyle }) {
   return (
     <View style={[styles.card, style]}>
       <Skeleton height={20} width="60%" />
-      <Skeleton height={14} width="40%" style={{ marginTop: 8 }} />
+      <Skeleton height={14} width="40%" style={{ marginTop: Spacing.sm }} />
     </View>
   );
 }
@@ -44,12 +44,12 @@ export function SkeletonFixture() {
     <View style={styles.fixture}>
       <View style={styles.side}>
         <Skeleton width={44} height={44} radius={22} />
-        <Skeleton height={12} width={40} style={{ marginTop: 6 }} />
+        <Skeleton height={12} width={40} style={{ marginTop: Spacing.xs + 2 }} />
       </View>
       <Skeleton width={50} height={16} />
       <View style={styles.side}>
         <Skeleton width={44} height={44} radius={22} />
-        <Skeleton height={12} width={40} style={{ marginTop: 6 }} />
+        <Skeleton height={12} width={40} style={{ marginTop: Spacing.xs + 2 }} />
       </View>
     </View>
   );
@@ -58,23 +58,23 @@ export function SkeletonFixture() {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.surface,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: Radius.lg,
+    padding: Spacing.base,
     borderWidth: 1,
     borderColor: Colors.border,
-    gap: 8,
-    marginBottom: 8,
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
   },
   fixture: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: Colors.surface,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: Radius.lg,
+    padding: Spacing.base,
     borderWidth: 1,
     borderColor: Colors.border,
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   side: { alignItems: 'center', gap: 4 },
 });
