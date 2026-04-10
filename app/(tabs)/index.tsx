@@ -4,20 +4,23 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { CompetitionPillRow } from '../../components/ui/CompetitionPill';
+import { LiveTicker } from '../../components/ui/LiveTicker';
+import { SurvivorCount } from '../../components/ui/SurvivorCount';
+import { TopPicksMini } from '../../components/home/TopPicksMini';
 import { RoundCard } from '../../components/home/RoundCard';
 import { FixtureRow } from '../../components/home/FixtureRow';
+import { LeagueCard } from '../../components/leagues/LeagueCard';
 import { ActivityFeedItem } from '../../components/home/ActivityFeedItem';
-import { CountdownTimer } from '../../components/ui/CountdownTimer';
 import { SkeletonCard, SkeletonFixture } from '../../components/ui/Skeleton';
 import { Card } from '../../components/ui/Card';
-import { EmptyState } from '../../components/ui/EmptyState';
-import { useAuthModal } from '../../contexts/AuthModal';
-import { Colors, Spacing, Typography } from '../../constants/theme';
+import { Button } from '../../components/ui/Button';
+import { Colors, Spacing, Typography, Fonts } from '../../constants/theme';
 import { useCompetition } from '../../hooks/useCompetition';
 import { useGuestPicks } from '../../hooks/useGuest';
 import { useAuth } from '../../hooks/useAuth';
@@ -27,12 +30,14 @@ import {
   getRoundDeadline,
   getRoundName,
 } from '../../lib/api';
-import { ApiMatch, GuestPick } from '../../types';
+import { getTickerItems } from '../../lib/ticker';
+import { getGlobalStats, getUserLeagues, getUserStatus } from '../../lib/leagueQueries';
+import { mockMatchdayDistribution, topPicks } from '../../lib/stats';
+import { ApiMatch, GuestPick, League, MemberStatus } from '../../types';
 
 export default function HomeScreen() {
   const { competition, setCompetition } = useCompetition();
   const { user } = useAuth();
-  const { show: showAuth } = useAuthModal();
   const { picks, getPickForRound } = useGuestPicks(competition.id);
 
   const [matchday, setMatchday] = useState<number | null>(null);
@@ -40,30 +45,79 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tickerItems, setTickerItems] = useState<string[]>([]);
+  const [globalStats, setGlobalStats] = useState<{ survivors: number; eliminated: number; totalPlayers: number; currentGameweek: number } | null>(null);
+  const [topPicksData, setTopPicksData] = useState<Array<{ tla: string; crest: string; shortName: string; percentage: number }>>([]);
+  const [userLeagues, setUserLeagues] = useState<League[]>([]);
+  const [leagueStatuses, setLeagueStatuses] = useState<Record<string, MemberStatus | 'GUEST' | null>>({});
 
   const load = useCallback(async () => {
     setError(null);
     try {
-      const md = await getCurrentMatchday(competition.apiId);
-      if (md === null) {
-        setLoading(false);
-        return;
+      const [md, stats] = await Promise.all([
+        getCurrentMatchday(competition.apiId),
+        getGlobalStats(competition.id),
+      ]);
+      setGlobalStats(stats);
+
+      let fixturesList: ApiMatch[] = [];
+      if (md !== null) {
+        setMatchday(md);
+        fixturesList = await getMatchdayFixtures(competition.apiId, md);
+        setMatches(fixturesList);
       }
-      setMatchday(md);
-      const fixtures = await getMatchdayFixtures(competition.apiId, md);
-      setMatches(fixtures);
-    } catch (e) {
-      setError('Could not load fixtures. Check your connection.');
+
+      // Ticker items (at least one from real data)
+      const ticker = await getTickerItems(competition.id, fixturesList);
+      setTickerItems(ticker);
+
+      // Top picks from mock distribution
+      if (fixturesList.length > 0 && stats) {
+        const dist = mockMatchdayDistribution(fixturesList, stats.survivors);
+        const top = topPicks(dist, 3);
+        // Enrich with crest and shortName from fixtures
+        const allTeams = fixturesList.flatMap((m) => [m.homeTeam, m.awayTeam]);
+        setTopPicksData(
+          top.map((t) => {
+            const team = allTeams.find((at) => at.tla === t.tla);
+            return {
+              tla: t.tla,
+              crest: team?.crest ?? '',
+              shortName: team?.shortName ?? t.tla,
+              percentage: t.percentage,
+            };
+          })
+        );
+      }
+
+      // Signed-in: load user leagues
+      if (user) {
+        const leagues = await getUserLeagues(user.uid, null);
+        const competitionLeagues = leagues.filter((l) => l.competitionId === competition.id);
+        setUserLeagues(competitionLeagues);
+
+        // Load statuses
+        const statuses: Record<string, MemberStatus | 'GUEST' | null> = {};
+        for (const l of competitionLeagues) {
+          statuses[l.id] = await getUserStatus(l.id, user.uid, null);
+        }
+        setLeagueStatuses(statuses);
+      }
+    } catch {
+      setError('Could not load data. Check your connection.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [competition.apiId]);
+  }, [competition.apiId, competition.id, user]);
 
   useEffect(() => {
     setLoading(true);
     setMatches([]);
     setMatchday(null);
+    setTickerItems([]);
+    setTopPicksData([]);
+    setUserLeagues([]);
     load();
   }, [competition.id]);
 
@@ -80,8 +134,6 @@ export default function HomeScreen() {
     ? getPickForRound(String(matchday))
     : undefined;
 
-  const displayName = user?.displayName ?? user?.email?.split('@')[0] ?? 'You';
-
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -89,21 +141,13 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
       >
-        {/* Header */}
+        {/* Wordmark */}
         <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>
-              {user ? `Welcome back, ${displayName}` : 'Playing as guest'}
-            </Text>
-            <Text style={styles.appName}>Last Man Standing</Text>
-          </View>
-          {deadline && !loading && (
-            <View style={styles.headerTimer}>
-              <Text style={styles.headerTimerLabel}>Deadline</Text>
-              <CountdownTimer deadline={deadline} size="sm" />
-            </View>
-          )}
+          <Text style={styles.wordmark}>LAST MAN STANDING</Text>
         </View>
+
+        {/* Live ticker */}
+        {tickerItems.length > 0 && <LiveTicker items={tickerItems} />}
 
         {/* Competition selector */}
         <CompetitionPillRow activeId={competition.id} onSelect={setCompetition} />
@@ -131,7 +175,7 @@ export default function HomeScreen() {
                 />
               )}
 
-              {/* Live/Recent fixtures */}
+              {/* Live/Recent fixtures row */}
               {matches.length > 0 && (
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>
@@ -141,26 +185,59 @@ export default function HomeScreen() {
                 </View>
               )}
 
-              {/* League activity feed */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>League Activity</Text>
-                <EmptyState
-                  icon="🏆"
-                  title="No active leagues yet."
-                  subtitle={
-                    user
-                      ? 'Join a league to see your friends\u2019 picks here.'
-                      : 'Sign up and join a league to see activity here.'
-                  }
-                  ctaLabel={user ? undefined : 'Sign up free'}
-                  onCta={user ? undefined : () => showAuth('Join to create leagues')}
-                />
-              </View>
+              {/* ── Signed-in: user leagues ── */}
+              {user && userLeagues.length > 0 && (
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Your Leagues</Text>
+                  {userLeagues.map((league) => (
+                    <LeagueCard
+                      key={league.id}
+                      league={league}
+                      userStatus={leagueStatuses[league.id] ?? null}
+                      onPress={() => {/* TODO: navigate to league detail */}}
+                    />
+                  ))}
+                </View>
+              )}
 
-              {/* Season picks summary */}
+              {/* ── Global pool card (guests, or signed-in with no leagues) ── */}
+              {(!user || userLeagues.length === 0) && globalStats && (
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>This week in the Global Pool</Text>
+                  <Card elevated style={styles.poolCard}>
+                    <SurvivorCount
+                      alive={globalStats.survivors}
+                      eliminated={globalStats.eliminated}
+                    />
+                    {roundName && (
+                      <Text style={styles.poolGameweek}>
+                        {roundName} · {matches.length} fixtures
+                      </Text>
+                    )}
+                  </Card>
+
+                  {/* Top picks mini-leaderboard */}
+                  {topPicksData.length > 0 && <TopPicksMini picks={topPicksData} />}
+
+                  {/* CTA */}
+                  <TouchableOpacity
+                    style={styles.ctaButton}
+                    onPress={() => router.push('/(tabs)/pick')}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.ctaText}>
+                      {user ? 'Join the Global Pool \u2192' : 'Make your pick \u2192'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Season picks summary (supplementary, below the fold) */}
               {picks.length > 0 && (
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Your Picks ({competition.shortName})</Text>
+                  <Text style={styles.sectionTitle}>
+                    Your Picks ({competition.shortName})
+                  </Text>
                   {[...picks].reverse().map((p, i) => (
                     <ActivityFeedItem
                       key={i}
@@ -185,26 +262,46 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   scroll: { paddingBottom: Spacing['4xl'] },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
     paddingHorizontal: Spacing.xl,
     paddingTop: Spacing.sm,
-    paddingBottom: Spacing.sm,
+    paddingBottom: Spacing.xs,
   },
-  greeting: { fontSize: Typography.sm, color: Colors.textSecondary, marginBottom: 2 },
-  appName: { fontSize: Typography.xl, fontWeight: Typography.extrabold, color: Colors.text, letterSpacing: -0.5 },
-  headerTimer: { alignItems: 'flex-end', gap: 2 },
-  headerTimerLabel: { fontSize: 10, color: Colors.textMuted, fontWeight: '600', letterSpacing: 0.5 },
-  body: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg, gap: Spacing.base },
+  wordmark: {
+    fontSize: Typography['3xl'],
+    fontFamily: Fonts.display,
+    fontWeight: '400', // Bebas Neue is single-weight; explicit 400 avoids RN bold synthesis
+    color: Colors.text,
+    letterSpacing: 2,
+  },
+  body: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.md, gap: Spacing.base },
   section: { gap: Spacing.sm },
   sectionTitle: {
     fontSize: Typography.sm,
-    fontWeight: Typography.semibold,
+    fontWeight: '700',
     color: Colors.textSecondary,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
     marginBottom: Spacing.xs,
+  },
+  poolCard: { gap: Spacing.sm },
+  poolGameweek: {
+    fontSize: Typography.sm,
+    color: Colors.textMuted,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  ctaButton: {
+    backgroundColor: Colors.primary + '14',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.primary + '40',
+    paddingVertical: Spacing.md,
+    alignItems: 'center',
+  },
+  ctaText: {
+    fontSize: Typography.md,
+    fontWeight: '700',
+    color: Colors.primary,
   },
   errorCard: { borderColor: Colors.danger + '40' },
   errorText: { color: Colors.danger, fontSize: Typography.base },
