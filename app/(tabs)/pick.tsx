@@ -5,6 +5,7 @@ import {
   StyleSheet,
   Text,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -108,8 +109,15 @@ export default function PickScreen() {
     : undefined;
 
   const deadline = getRoundDeadline(matches);
-  const isDeadlinePassed = deadline ? deadline <= new Date() : false;
+  // If deadline is null but matches exist, all have kicked off — deadline has passed.
+  // If deadline is null and no matches, we're pre-season — not passed.
+  const isDeadlinePassed = deadline
+    ? deadline <= new Date()
+    : matches.length > 0;
   const roundName = matchday ? getRoundName(matches[0]?.stage ?? 'REGULAR_SEASON', matchday) : '';
+
+  // All matches kicked off — show narrative instead of untappable cards
+  const allMatchesLocked = matches.length > 0 && matches.every((m) => isMatchLocked(m.utcDate));
 
   // Pick distribution from mock stats
   const pickDistribution = matches.length > 0
@@ -158,7 +166,7 @@ export default function PickScreen() {
         setSelectedTeam(null);
       }
     } catch {
-      // pick save failed
+      Alert.alert("Couldn't save your pick", 'Something went wrong. Please try again.');
     } finally {
       setLockLoading(false);
     }
@@ -194,9 +202,17 @@ export default function PickScreen() {
         <GameweekHeader roundName={roundName} deadline={deadline} />
       ) : null}
 
-      {isDeadlinePassed && (
+      {isDeadlinePassed && !allMatchesLocked && (
         <Card style={styles.lockedCard}>
           <Text style={styles.lockedText}>Picks are locked for {roundName}</Text>
+        </Card>
+      )}
+
+      {allMatchesLocked && !currentPick && (
+        <Card style={styles.lockedCard}>
+          <Text style={styles.lockedText}>
+            All matches in {roundName || 'this gameweek'} have kicked off. Next picks open soon.
+          </Text>
         </Card>
       )}
 
@@ -230,17 +246,28 @@ export default function PickScreen() {
         <View style={styles.recentSection}>
           <Text style={styles.recentTitle}>Last round results</Text>
           {recentResults.slice(0, 5).map((m) => {
+            const { winner } = m.score;
             const homeElim = hypotheticals.some((h) => h.tla === m.homeTeam.tla);
             const awayElim = hypotheticals.some((h) => h.tla === m.awayTeam.tla);
+            const homeWon = winner === 'HOME_TEAM';
+            const awayWon = winner === 'AWAY_TEAM';
             return (
               <View key={m.id} style={styles.resultRow}>
-                <Text style={[styles.resultTeam, homeElim && styles.resultElim]}>
+                <Text style={[
+                  styles.resultTeam,
+                  homeWon && styles.resultWin,
+                  homeElim && styles.resultElim,
+                ]}>
                   {homeElim && <SkullGlyph size={12} />} {m.homeTeam.tla}
                 </Text>
                 <Text style={styles.resultScore}>
                   {m.score.fullTime.home ?? '-'} – {m.score.fullTime.away ?? '-'}
                 </Text>
-                <Text style={[styles.resultTeam, awayElim && styles.resultElim]}>
+                <Text style={[
+                  styles.resultTeam,
+                  awayWon && styles.resultWin,
+                  awayElim && styles.resultElim,
+                ]}>
                   {m.awayTeam.tla} {awayElim && <SkullGlyph size={12} />}
                 </Text>
               </View>
@@ -387,6 +414,7 @@ const styles = StyleSheet.create({
     color: Colors.text,
     width: 60,
   },
+  resultWin: { color: Colors.alive, fontWeight: '700' },
   resultElim: { color: Colors.danger },
   resultScore: {
     fontSize: Typography.sm,

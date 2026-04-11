@@ -36,6 +36,10 @@ export interface ApiMatch {
     fullTime: { home: number | null; away: number | null };
     halfTime: { home: number | null; away: number | null };
   };
+  season?: {
+    id: number;
+    currentMatchday: number | null;
+  };
 }
 
 export interface ApiMatchday {
@@ -45,7 +49,7 @@ export interface ApiMatchday {
     name: string;
     code: string;
   };
-  season: {
+  season?: {
     id: number;
     currentMatchday: number | null;
   };

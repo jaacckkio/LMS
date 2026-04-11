@@ -52,7 +52,14 @@ export async function getCurrentMatchday(apiId: number): Promise<number | null> 
     const data = await fetchApi<ApiMatchday>(
       `/competitions/${apiId}/matches?status=SCHEDULED&limit=1`
     );
-    return data.season?.currentMatchday ?? null;
+    // v4 API nests season under each match, not at the top level
+    const md = data.matches?.[0]?.season?.currentMatchday
+      ?? data.matches?.[0]?.matchday
+      ?? null;
+    if (md === null) {
+      console.warn('[api] getCurrentMatchday: no matchday in response', Object.keys(data));
+    }
+    return md;
   } catch {
     return null;
   }
