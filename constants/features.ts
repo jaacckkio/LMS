@@ -6,4 +6,6 @@
 export const FEATURES = {
   /** Apple / Google sign-in buttons. Requires native build (EAS). */
   socialAuth: false,
+  /** Firebase ↔ Supabase JWT bridge. Off until B7 cutover. */
+  useSupabaseBridge: false,
 } as const;

@@ -134,8 +134,10 @@ create policy "leagues_public_read"       on leagues       for select using (tru
 
 -- Users: read all, write own
 create policy "users_read_all"  on users for select using (true);
+-- B1 RLS migration: sub = users.id (UUID), not firebase_uid.
+-- The Edge Function does firebase_uid → users.id translation at sign-in.
 create policy "users_write_own" on users for all
-  using (firebase_uid = (current_setting('request.jwt.claims', true)::json->>'sub'));
+  using (id = (current_setting('request.jwt.claims', true)::json->>'sub')::uuid);
 
 -- Picks: visible only within the same league after the round is COMPLETE (hidden until deadline)
 -- On insert/update: must be own pick
@@ -147,19 +149,13 @@ create policy "picks_read_post_deadline" on picks for select
         and r.status = 'COMPLETE'
     )
     or
-    -- Own picks always visible
-    picks.user_id = (
-      select id from users
-      where firebase_uid = (current_setting('request.jwt.claims', true)::json->>'sub')
-    )
+    -- Own picks always visible (sub = users.id UUID)
+    picks.user_id = (current_setting('request.jwt.claims', true)::json->>'sub')::uuid
   );
 
 create policy "picks_insert_own" on picks for insert
   with check (
-    user_id = (
-      select id from users
-      where firebase_uid = (current_setting('request.jwt.claims', true)::json->>'sub')
-    )
+    user_id = (current_setting('request.jwt.claims', true)::json->>'sub')::uuid
   );
 
 create policy "lm_read_own_leagues" on league_members for select
@@ -167,10 +163,7 @@ create policy "lm_read_own_leagues" on league_members for select
     exists (
       select 1 from league_members me
       where me.league_id = league_members.league_id
-        and me.user_id = (
-          select id from users
-          where firebase_uid = (current_setting('request.jwt.claims', true)::json->>'sub')
-        )
+        and me.user_id = (current_setting('request.jwt.claims', true)::json->>'sub')::uuid
     )
     or
     exists (select 1 from leagues l where l.id = league_members.league_id and l.league_type = 'GLOBAL')

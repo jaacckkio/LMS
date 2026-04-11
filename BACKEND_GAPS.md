@@ -114,3 +114,13 @@ Every stub, mock, and hardcoded value introduced in Phases 1–3 that needs real
 **Expected RPC:** `rpc migrate_guest_picks(user_id uuid, picks jsonb)`
 **Expected input:** All picks from `getAllGuestPicks()` in `lib/storage.ts`
 **Used by:** Post-signup flow in pick screen
+
+---
+
+## 13. Supabase JWT refresh token flow
+
+**Where stubbed:** `lib/authBridge.ts` — bridge returns `refresh_token: ""`. The 401 retry wrapper in `lib/supabase.ts` re-bridges via Firebase when the 1-hour token expires, which is a workaround, not a real refresh flow.
+**Needs:** Either (a) implement a real Supabase refresh token (Edge Function mints one, client uses `autoRefreshToken`) or (b) accept the re-bridge approach and ensure it covers all query paths.
+**Current mitigation:** `withAuthRetry()` wrapper catches PGRST301 errors and re-bridges automatically.
+**Used by:** All authenticated Supabase queries
+**Deferred to:** Future PR after B7 cutover
