@@ -223,9 +223,7 @@ export default function PickScreen() {
         </Card>
       )}
 
-      <Text style={styles.fixtureLabel}>
-        {roundName ? `${roundName} Fixtures` : 'Fixtures'}
-      </Text>
+      <Text style={styles.fixtureLabel}>Fixtures</Text>
     </View>
   );
 

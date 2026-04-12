@@ -83,11 +83,12 @@ const styles = StyleSheet.create({
     lineHeight: 40,
   },
   label: {
-    fontSize: 10,
+    fontSize: 13,
     fontWeight: '600',
     color: Colors.textMuted,
-    letterSpacing: 0.8,
+    letterSpacing: 1.5,
     textTransform: 'uppercase',
+    marginTop: 3,
   },
   sep: {
     fontSize: 30,

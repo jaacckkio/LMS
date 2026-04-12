@@ -28,7 +28,9 @@ export function TeamCrest({ uri, size = 40, state = 'default' }: Props) {
       style={[
         styles.container,
         { width: size, height: size, borderRadius: size / 2 },
-        ring ? { borderColor: ring, borderWidth: 2 } : null,
+        ring
+          ? { borderColor: ring, borderWidth: 2 }
+          : { borderWidth: 0 },
       ]}
     >
       <Image

@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xl,
     paddingRight: Spacing.xl + 24,  // prevent right-edge truncation
     gap: Spacing.sm,
-    paddingVertical: Spacing.sm,
+    paddingVertical: Spacing.base,
     alignItems: 'center',
   },
   pill: {
