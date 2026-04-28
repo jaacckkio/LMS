@@ -55,7 +55,9 @@ function Pill({
 
 const styles = StyleSheet.create({
   scroll: {
-    flexGrow: 0,   // prevents stretching to fill flex parent in non-scroll contexts
+    flexGrow: 0,
+    flexShrink: 0,
+    minHeight: 56,
   },
   row: {
     paddingHorizontal: Spacing.xl,
@@ -67,7 +69,7 @@ const styles = StyleSheet.create({
   pill: {
     alignItems: 'center',
     paddingHorizontal: Spacing.base,
-    paddingVertical: Spacing.sm,
+    paddingVertical: 10,
     borderRadius: Radius.pill,
     backgroundColor: Colors.surface,
     borderWidth: 1,

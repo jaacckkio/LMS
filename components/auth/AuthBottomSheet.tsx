@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   TextInput,
+  ScrollView,
   StyleSheet,
   Animated,
   Alert,
@@ -13,6 +14,7 @@ import {
   Platform,
   Text,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useAuthModal } from '../../contexts/AuthModal';
 import { signInWithEmail, signUpWithEmail } from '../../lib/firebase';
@@ -24,6 +26,7 @@ const SHEET_HEIGHT = Dimensions.get('window').height * 0.72;
 
 export function AuthBottomSheet() {
   const { visible, hide, reason } = useAuthModal();
+  const insets = useSafeAreaInsets();
   const translateY = useRef(new Animated.Value(SHEET_HEIGHT)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
@@ -76,94 +79,101 @@ export function AuthBottomSheet() {
       </TouchableWithoutFeedback>
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'position' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         style={styles.kav}
         pointerEvents="box-none"
       >
-        <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>
+        <Animated.View style={[styles.sheet, { transform: [{ translateY }], marginTop: insets.top }]}>
           <View style={styles.handle} />
+          <ScrollView
+            bounces={false}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.sheetContent}
+          >
+            {reason ? (
+              <Text style={styles.reason}>{reason}</Text>
+            ) : (
+              <Text style={styles.title}>Join the game</Text>
+            )}
+            <Text style={styles.subtitle}>
+              Sign up to save your picks, join leagues, and track your history.
+            </Text>
 
-          {reason ? (
-            <Text style={styles.reason}>{reason}</Text>
-          ) : (
-            <Text style={styles.title}>Join the game</Text>
-          )}
-          <Text style={styles.subtitle}>
-            Sign up to save your picks, join leagues, and track your history.
-          </Text>
-
-          {mode === 'options' ? (
-            <View style={styles.options}>
-              {/* TODO: when social auth flag flips, all three buttons (Apple/Google/Email)
-                  should be visually equal-weighted — currently Apple/Google are variant="secondary"
-                  and Email is primary. Equalize before re-enabling. */}
-              {FEATURES.socialAuth && (
-                <>
-                  <Button
-                    title="Continue with Apple"
-                    onPress={() => Alert.alert('Coming soon', 'Requires a native build with EAS')}
-                    variant="secondary"
-                    style={styles.optBtn}
-                  />
-                  <Button
-                    title="Continue with Google"
-                    onPress={() => Alert.alert('Coming soon', 'Requires a native build with EAS')}
-                    variant="secondary"
-                    style={styles.optBtn}
-                  />
-                  <View style={styles.divider}>
-                    <View style={styles.divLine} />
-                    <Text style={styles.divText}>or</Text>
-                    <View style={styles.divLine} />
-                  </View>
-                </>
-              )}
-              <Button
-                title="Continue with Email"
-                onPress={() => setMode('email')}
-                style={styles.optBtn}
-              />
-              <TouchableOpacity onPress={hide} style={styles.guestBtn}>
-                <Text style={styles.guestText}>Continue as Guest</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.emailForm}>
-              <TextInput
-                style={styles.input}
-                placeholder="Email"
-                placeholderTextColor={Colors.textMuted}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoComplete="email"
-                autoFocus
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                placeholderTextColor={Colors.textMuted}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-              />
-              <Button
-                title={isSignIn ? 'Sign In' : 'Create Account'}
-                onPress={handleEmailAuth}
-                loading={loading}
-                style={styles.optBtn}
-              />
-              <TouchableOpacity onPress={() => setIsSignIn(!isSignIn)}>
-                <Text style={styles.toggleText}>
-                  {isSignIn ? "No account? Sign up" : 'Have an account? Sign in'}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setMode('options')}>
-                <Text style={[styles.toggleText, { color: Colors.textMuted }]}>← Back</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+            {mode === 'options' ? (
+              <View style={styles.options}>
+                {/* TODO: when social auth flag flips, all three buttons (Apple/Google/Email)
+                    should be visually equal-weighted — currently Apple/Google are variant="secondary"
+                    and Email is primary. Equalize before re-enabling. */}
+                {FEATURES.socialAuth && (
+                  <>
+                    <Button
+                      title="Continue with Apple"
+                      onPress={() => Alert.alert('Coming soon', 'Requires a native build with EAS')}
+                      variant="secondary"
+                      style={styles.optBtn}
+                    />
+                    <Button
+                      title="Continue with Google"
+                      onPress={() => Alert.alert('Coming soon', 'Requires a native build with EAS')}
+                      variant="secondary"
+                      style={styles.optBtn}
+                    />
+                    <View style={styles.divider}>
+                      <View style={styles.divLine} />
+                      <Text style={styles.divText}>or</Text>
+                      <View style={styles.divLine} />
+                    </View>
+                  </>
+                )}
+                <Button
+                  title="Continue with Email"
+                  onPress={() => setMode('email')}
+                  style={styles.optBtn}
+                />
+                <TouchableOpacity onPress={hide} style={styles.guestBtn}>
+                  <Text style={styles.guestText}>Continue as Guest</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.emailForm}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Email"
+                  placeholderTextColor={Colors.textMuted}
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  autoFocus
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Password"
+                  placeholderTextColor={Colors.textMuted}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                />
+                <Button
+                  title={isSignIn ? 'Sign In' : 'Create Account'}
+                  onPress={handleEmailAuth}
+                  loading={loading}
+                  style={styles.optBtn}
+                />
+                <TouchableOpacity onPress={() => setIsSignIn(!isSignIn)}>
+                  <Text style={styles.toggleText}>
+                    {isSignIn ? "No account? Sign up" : 'Have an account? Sign in'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setMode('options')}>
+                  <Text style={[styles.toggleText, { color: Colors.textMuted }]}>← Back</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </ScrollView>
         </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
@@ -182,10 +192,13 @@ const styles = StyleSheet.create({
     borderTopRightRadius: Radius.xl,
     borderWidth: 1,
     borderColor: Colors.border,
+    paddingTop: Spacing.md,
+    maxHeight: SHEET_HEIGHT,
+  },
+  sheetContent: {
+    flexGrow: 1,
     paddingHorizontal: Spacing.xl,
     paddingBottom: Spacing['4xl'],
-    paddingTop: Spacing.md,
-    minHeight: SHEET_HEIGHT,
   },
   handle: {
     width: 40, height: 4, borderRadius: 2,
